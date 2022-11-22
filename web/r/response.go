@@ -1,13 +1,15 @@
 package r
 
 type Resp struct {
-	Code *StatusCode
-	Msg  string
+	Code StatusCode `json:"code"`
+	Msg  string     `json:"msg"`
 }
 
+// RespData 响应结构体
+// T 返回数据的数据类型
 type RespData[T any] struct {
 	Resp
-	Data *T
+	Data T `json:"data"`
 }
 
 // 成功响应 部分 --------
@@ -24,7 +26,7 @@ func SuccessMsg(msg string) *Resp {
 }
 
 // SuccessData 使用默认提示消息，并携带数据
-func SuccessData[T any](data *T) *RespData[T] {
+func SuccessData[T any](data T) *RespData[T] {
 	return NewWithData(Ok, Status[Ok], data)
 }
 
@@ -41,7 +43,7 @@ func FailCode(code StatusCode) *Resp {
 }
 
 // FailMsgDetails 自定义错误提示信息和错误细节，默认 code = 5000
-func FailMsgDetails[T any](msg string, data *T) *RespData[T] {
+func FailMsgDetails[T any](msg string, data T) *RespData[T] {
 	return NewWithData(Internal, msg, data)
 }
 
@@ -51,7 +53,7 @@ func Fail(code StatusCode, msg string) *Resp {
 }
 
 // FailDetails 自定义 code 和错误提示信息，错误细节
-func FailDetails[T any](code StatusCode, msg string, data *T) *RespData[T] {
+func FailDetails[T any](code StatusCode, msg string, data T) *RespData[T] {
 	return NewWithData(code, msg, data)
 }
 
@@ -65,13 +67,13 @@ func NewCode(code StatusCode) *Resp {
 
 // New 自定义 code 和 msg
 func New(code StatusCode, msg string) *Resp {
-	return &Resp{&code, msg}
+	return &Resp{code, msg}
 }
 
 // NewWithData 自定义 code 和提示信息，并携带数据
-func NewWithData[T any](code StatusCode, msg string, data *T) *RespData[T] {
+func NewWithData[T any](code StatusCode, msg string, data T) *RespData[T] {
 	return &RespData[T]{
-		Resp{&code, msg},
+		Resp{code, msg},
 		data,
 	}
 }

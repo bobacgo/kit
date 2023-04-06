@@ -2,7 +2,7 @@ package r_test
 
 import (
 	"encoding/json"
-	"github.com/gogoclouds/common-lib/web/r"
+	"github.com/gogoclouds/gogo/web/r"
 	"log"
 	"testing"
 )

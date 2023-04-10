@@ -21,4 +21,5 @@ var Status = map[StatusCode]string{
 	4011: "Token缺失",
 	4013: "参数不合法",
 	5000: "系统内部错误",
+	5001: "操作失败",
 }

@@ -1,7 +1,8 @@
-package logger
+package log
 
 import (
 	"fmt"
+	"github.com/gogoclouds/gogo/internal/conf"
 	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -11,7 +12,7 @@ import (
 	"time"
 )
 
-var logger *zap.SugaredLogger
+var Logger *zap.SugaredLogger
 
 // 从配置文件映射结构
 
@@ -22,7 +23,7 @@ var (
 
 // Init logger handle
 // appName log file prefix
-func Init(appName string, conf Config) {
+func Init(appName string, conf conf.Log) {
 	core := zapcore.NewCore( // 输出到日志文件
 		setJSONEncoder(),
 		setLoggerWriter(appName, conf),
@@ -34,7 +35,7 @@ func Init(appName string, conf Config) {
 		level2Int(conf.Level),
 	)
 	core = zapcore.NewTee(core, outputConsole)
-	logger = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1)).Sugar()
+	Logger = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1)).Sugar()
 }
 
 func setConsoleEncoder() zapcore.Encoder {
@@ -72,7 +73,7 @@ func level2Int(level string) zapcore.Level {
 	}
 }
 
-func setLoggerWriter(appName string, conf Config) zapcore.WriteSyncer {
+func setLoggerWriter(appName string, conf conf.Log) zapcore.WriteSyncer {
 	fName := makeFileName(conf.DirPath, appName)
 	return zapcore.AddSync(
 		&lumberjack.Logger{

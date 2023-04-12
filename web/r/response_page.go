@@ -1,8 +1,8 @@
 package r
 
 type Page[T any] struct {
-	TotalPage int `json:"totalPage"` // 总页数
-	List      []T `json:"list"`      // 列表数据
+	Total int `json:"total"` // 总页数
+	List  []T `json:"list"`  // 列表数据
 }
 
 // PageResp 分页数据响应体

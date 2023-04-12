@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gogoclouds/gogo/_examples/internal/app/module_one/biz"
 	"github.com/gogoclouds/gogo/_examples/internal/app/module_one/model"
+	"github.com/gogoclouds/gogo/g"
 	"github.com/gogoclouds/gogo/logger"
 	"github.com/gogoclouds/gogo/web/gin/reply"
 	"github.com/gogoclouds/gogo/web/r"
@@ -25,6 +26,11 @@ func (api *sysUserApi) PageList(ctx *gin.Context) {
 }
 
 func (api *sysUserApi) Create(ctx *gin.Context) {
+	req, check := g.BindAndValidate[model.CreateUserReq](ctx)
+	if check {
+		return
+	}
+	_ = req
 	reply.SuccessMsg(ctx, r.OKCreate)
 }
 

@@ -1,25 +1,27 @@
 package logger
 
+import "github.com/gogoclouds/gogo/internal/log"
+
 func Info(args ...interface{}) {
-	logger.Info(args...)
+	log.Logger.Info(args...)
 }
 
 func Infof(template string, args ...interface{}) {
-	logger.Infof(template, args...)
+	log.Logger.Infof(template, args...)
 }
 
 func Error(args ...interface{}) {
-	logger.Error(args...)
+	log.Logger.Error(args...)
 }
 
 func Errorf(template string, args ...interface{}) {
-	logger.Errorf(template, args...)
+	log.Logger.Errorf(template, args...)
 }
 
 func Debug(args ...interface{}) {
-	logger.Debug(args...)
+	log.Logger.Debug(args...)
 }
 
 func Debugf(template string, args ...interface{}) {
-	logger.Debugf(template, args...)
+	log.Logger.Debugf(template, args...)
 }

@@ -6,3 +6,5 @@
 
 * gin
 * zap
+* gopkg.in/yaml.v3
+* validator

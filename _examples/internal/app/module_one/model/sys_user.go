@@ -1,6 +1,8 @@
 package model
 
-import "github.com/gogoclouds/gogo/g"
+import (
+	"github.com/gogoclouds/gogo/web/r"
+)
 
 type SysUser struct {
 	Username string `json:"username"`
@@ -8,8 +10,8 @@ type SysUser struct {
 	Nickname string `json:"nickname"`
 }
 
-type ReqPageQuery struct {
-	g.ReqPageInfo
+type PageQuery struct {
+	r.PageInfo
 	Username string `json:"username"`
 	Nickname string `json:"nickname"`
 }

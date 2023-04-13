@@ -8,7 +8,7 @@ type Page[T any] struct {
 // PageResp 分页数据响应体
 // T 列表每一项的数据类型
 type PageResp[T any] struct {
-	PageReq
+	PageInfo
 	Page[T]
 }
 
@@ -16,33 +16,33 @@ type PageResp[T any] struct {
 // T 列表每一项的数据类型
 // M 非列表数据的数据类型
 type PageMetaResp[T any, M any] struct {
-	PageReq
+	PageInfo
 	Page[T]
 	Meta M `json:"meta"`
 }
 
 // NewPage 分页数据组装
 //
-// currPage 当前数据是第几页
-// totalPage 总的页数
+// page 当前数据是第几页
+// total 总的条数
 // pageSize 每一页多少条数据
-func NewPage[T any](list []T, currPage, totalPage, pageSize int) *PageResp[T] {
+func NewPage[T any](list []T, page, total, pageSize int) *PageResp[T] {
 	return &PageResp[T]{
-		PageReq: PageReq{currPage, pageSize},
-		Page:    Page[T]{totalPage, list},
+		PageInfo: PageInfo{Page: page, PageSize: pageSize},
+		Page:     Page[T]{total, list},
 	}
 }
 
 // NewPageMeta 分页数据组装-携带非列表数据
 //
-// currPage 当前数据是第几页
-// totalPage 总的页数
+// page 当前数据是第几页
+// total 总的条数
 // pageSize 每一页多少条数据
 // meta 非列表数据
-func NewPageMeta[T any, M any](list []T, currPage, totalPage, pageSize int, meta M) *PageMetaResp[T, M] {
+func NewPageMeta[T any, M any](list []T, page, total, pageSize int, meta M) *PageMetaResp[T, M] {
 	return &PageMetaResp[T, M]{
-		PageReq: PageReq{currPage, pageSize},
-		Page:    Page[T]{totalPage, list},
-		Meta:    meta,
+		PageInfo: PageInfo{Page: page, PageSize: pageSize},
+		Page:     Page[T]{total, list},
+		Meta:     meta,
 	}
 }

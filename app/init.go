@@ -7,9 +7,9 @@ import (
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	zhTranslations "github.com/go-playground/validator/v10/translations/zh"
-	"github.com/gogoclouds/gogo/g"
 	"github.com/gogoclouds/gogo/internal/conf"
 	"github.com/gogoclouds/gogo/internal/log"
+	"github.com/gogoclouds/gogo/web/gin/valid"
 	"reflect"
 	"strings"
 )
@@ -23,7 +23,7 @@ type app struct {
 
 func Init() {
 	initLogger()
-	initTrans()
+	initValidate()
 }
 
 func initLogger() {
@@ -36,7 +36,7 @@ func initLogger() {
 }
 
 // initTrans 初始化翻译器
-func initTrans() {
+func initValidate() {
 	// 修改gin框架中的Validator引擎属性，实现自定制
 	if validate, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		// 注册一个获取json tag的自定义方法
@@ -50,8 +50,8 @@ func initTrans() {
 		})
 
 		uni := ut.New(zh.New())
-		g.Trans, _ = uni.GetTranslator("zh")
-		if err := zhTranslations.RegisterDefaultTranslations(validate, g.Trans); err != nil {
+		valid.Trans, _ = uni.GetTranslator("zh")
+		if err := zhTranslations.RegisterDefaultTranslations(validate, valid.Trans); err != nil {
 			panic(err)
 		}
 	}

@@ -8,7 +8,7 @@ import (
 
 type sysUserDaoImpl struct{}
 
-func (dao *sysUserDaoImpl) PageList(query model.ReqPageQuery) (*r.PageResp[model.SysUser], *g.Error) {
+func (dao *sysUserDaoImpl) PageList(query model.PageQuery) (*r.PageResp[model.SysUser], *g.Error) {
 	_ = query
 	users := []model.SysUser{
 		{"weilanjin", "abc123", "lanjin.wei"},

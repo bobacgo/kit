@@ -2,6 +2,7 @@ package reply
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/gogoclouds/gogo/internal/wf"
 	"github.com/gogoclouds/gogo/web/r"
 	"net/http"
 )
@@ -11,44 +12,44 @@ import (
 
 // Success 默认提示信息为 msg = "操作成功"
 func Success(c *gin.Context) {
-	c.JSON(http.StatusOK, r.Success())
+	c.JSON(http.StatusOK, wf.Success())
 }
 
 // SuccessMsg 自定义 提示消息
 func SuccessMsg(c *gin.Context, msg string) {
-	c.JSON(http.StatusOK, r.SuccessMsg(msg))
+	c.JSON(http.StatusOK, wf.SuccessMsg(msg))
 }
 
 // SuccessData 使用默认提示消息，并携带数据
 func SuccessData[T any](c *gin.Context, data T) {
-	c.JSON(http.StatusOK, r.SuccessData(data))
+	c.JSON(http.StatusOK, wf.SuccessData(data))
 }
 
 // 失败响应 部分 --------
 
 // FailMsg 自定义错误提示信息，默认 code = 5000
 func FailMsg(c *gin.Context, msg string) {
-	c.JSON(http.StatusOK, r.FailMsg(msg))
+	c.JSON(http.StatusOK, wf.FailMsg(msg))
 }
 
 // FailCode 从 statusCode 定义错误提示信息
 func FailCode(c *gin.Context, code r.StatusCode) {
-	c.JSON(http.StatusOK, r.FailCode(code))
+	c.JSON(http.StatusOK, wf.FailCode(code))
 }
 
 // FailMsgDetails 自定义错误提示信息和错误细节，默认 code = 5000
 func FailMsgDetails[T any](c *gin.Context, msg string, data T) {
-	c.JSON(http.StatusOK, r.FailMsgDetails(msg, data))
+	c.JSON(http.StatusOK, wf.FailMsgDetails(msg, data))
 }
 
 // Fail 自定义 code 和错误提示信息
 func Fail(c *gin.Context, code r.StatusCode, msg string) {
-	c.JSON(http.StatusOK, r.Fail(code, msg))
+	c.JSON(http.StatusOK, wf.Fail(code, msg))
 }
 
 // FailDetails 自定义 code 和错误提示信息，错误细节
 func FailDetails[T any](c *gin.Context, code r.StatusCode, msg string, data T) {
-	c.JSON(http.StatusOK, r.FailDetails(code, msg, data))
+	c.JSON(http.StatusOK, wf.FailDetails(code, msg, data))
 }
 
 // 通用构造 部分 ----
@@ -56,15 +57,15 @@ func FailDetails[T any](c *gin.Context, code r.StatusCode, msg string, data T) {
 
 // Code 从 StatusCode 定义响应提示
 func Code(c *gin.Context, code r.StatusCode) {
-	c.JSON(http.StatusOK, r.NewCode(code))
+	c.JSON(http.StatusOK, wf.NewCode(code))
 }
 
 // Of 自定义 code 和 msg
 func Of(c *gin.Context, code r.StatusCode, msg string) {
-	c.JSON(http.StatusOK, r.New(code, msg))
+	c.JSON(http.StatusOK, wf.New(code, msg))
 }
 
 // WithData 自定义 code 和提示信息，并携带数据
 func WithData[T any](c *gin.Context, code r.StatusCode, msg string, data T) {
-	c.JSON(http.StatusOK, r.NewWithData(code, msg, data))
+	c.JSON(http.StatusOK, wf.NewWithData(code, msg, data))
 }

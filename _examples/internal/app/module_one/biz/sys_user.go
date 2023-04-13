@@ -9,7 +9,7 @@ import (
 
 type sysUserServiceImpl struct{}
 
-func (svc *sysUserServiceImpl) PageList(query model.ReqPageQuery) (*r.PageResp[model.SysUser], *g.Error) {
+func (svc *sysUserServiceImpl) PageList(query model.PageQuery) (*r.PageResp[model.SysUser], *g.Error) {
 	list, err := dao.SysUser.PageList(query)
 	return list, err
 }

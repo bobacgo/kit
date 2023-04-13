@@ -5,4 +5,4 @@ import (
 	"github.com/gogoclouds/gogo/g"
 )
 
-var SysUser g.IBase[model.SysUser, model.ReqPageQuery] = new(sysUserDaoImpl)
+var SysUser g.IBase[model.SysUser, model.PageQuery] = new(sysUserDaoImpl)

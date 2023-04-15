@@ -13,9 +13,10 @@ type config struct {
 
 // App 应用服务相关配置信息
 type App struct {
-	Name    string // 服务名
-	Version string // 版本号
-	Server  struct {
+	Name            string   // 服务名
+	Version         string   // 版本号
+	ConfigFileNames []string `yaml:"configFileNames"`
+	Server          struct {
 		Http Transport
 		Rpc  Transport
 	}

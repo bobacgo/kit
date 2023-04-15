@@ -2,6 +2,12 @@ package app
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"strings"
+
+	"github.com/gogoclouds/gogo/g"
+
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/locales/zh"
 	ut "github.com/go-playground/universal-translator"
@@ -10,8 +16,6 @@ import (
 	"github.com/gogoclouds/gogo/internal/conf"
 	"github.com/gogoclouds/gogo/internal/log"
 	"github.com/gogoclouds/gogo/web/gin/valid"
-	"reflect"
-	"strings"
 )
 
 type app struct {
@@ -21,9 +25,22 @@ type app struct {
 	enableHttp bool
 }
 
-func Init() {
+func Init(configPath string) {
+	load(configPath)
 	initLogger()
 	initValidate()
+}
+
+// ./config.yaml
+func load(filepath string) {
+	g.Conf = conf.New()
+	conf.Configure.ReadFile(filepath, g.Conf)
+	version, configFiles := g.Conf.App().Version, g.Conf.App().ConfigFileNames
+	for _, filename := range configFiles {
+		fullPath := fmt.Sprintf("./deploy/%s/%s", version, filename)
+		conf.Configure.ReadFile(fullPath, g.Conf)
+	}
+	conf.Configure.PrintConfInfo(g.Conf)
 }
 
 func initLogger() {

@@ -1,4 +1,4 @@
-package wf
+package response
 
 import "github.com/gogoclouds/gogo/web/r"
 

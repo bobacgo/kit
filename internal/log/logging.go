@@ -1,4 +1,4 @@
-package log
+package logger
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var Logger *zap.SugaredLogger
+var Log *zap.SugaredLogger
 
 // 从配置文件映射结构
 
@@ -21,9 +21,9 @@ var (
 	defLoggerFilenamePrefix = "log"
 )
 
-// Init logger handle
+// Initialize logger handle
 // appName log file prefix
-func Init(appName string, conf conf.Log) {
+func Initialize(appName string, conf conf.Log) {
 	core := zapcore.NewCore( // 输出到日志文件
 		setJSONEncoder(),
 		setLoggerWriter(appName, conf),
@@ -35,7 +35,7 @@ func Init(appName string, conf conf.Log) {
 		level2Int(conf.Level),
 	)
 	core = zapcore.NewTee(core, outputConsole)
-	Logger = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1)).Sugar()
+	Log = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1)).Sugar()
 }
 
 func setConsoleEncoder() zapcore.Encoder {

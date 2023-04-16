@@ -1,7 +1,10 @@
 package conf
 
 import (
+	"fmt"
 	"gopkg.in/yaml.v3"
+	"log"
+	"os"
 	"sync"
 )
 
@@ -10,8 +13,16 @@ type Config struct {
 	c  *config
 }
 
-func New() *Config {
-	return &Config{mu: sync.RWMutex{}, c: &config{}}
+func New(filepath string) *Config {
+	cfg := Config{mu: sync.RWMutex{}, c: &config{}}
+	cfg.readByFile(filepath)
+	version, configFiles := cfg.App().Version, cfg.App().ConfigFileNames
+	for _, filename := range configFiles { // 加载多个配置文件
+		fullPath := fmt.Sprintf("./deploy/%s/%s", version, filename)
+		cfg.readByFile(fullPath)
+	}
+	cfg.printConfInfo()
+	return &cfg
 }
 
 // Sync 局部更新
@@ -55,4 +66,21 @@ func (c *Config) Config() config {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return *c.c
+}
+
+func (c *Config) readByFile(path string) {
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+	if err = c.Sync(bytes); err != nil {
+		panic(err)
+	}
+}
+
+// 打印读取到的配置信息
+func (c *Config) printConfInfo() {
+	printConf, _ := yaml.Marshal(c.Config())
+	log.Println("======================= load config info ========================")
+	fmt.Println(string(printConf))
 }

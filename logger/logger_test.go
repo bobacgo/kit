@@ -1,14 +1,15 @@
 package logger_test
 
 import (
-	"github.com/gogoclouds/gogo/internal/conf"
-	"github.com/gogoclouds/gogo/internal/log"
-	"github.com/gogoclouds/gogo/logger"
 	"testing"
+
+	"github.com/gogoclouds/gogo/internal/conf"
+	logging "github.com/gogoclouds/gogo/internal/log"
+	"github.com/gogoclouds/gogo/logger"
 )
 
 func init() {
-	log.Init("gogo", conf.Log{
+	logging.Initialize("gogo", conf.Log{
 		Level:       "debug", // debug | info | error
 		FileSizeMax: 10,      // 10 MB
 		FileAgeMax:  10,      // 10d

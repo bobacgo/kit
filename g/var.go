@@ -1,6 +1,22 @@
 package g
 
-import "github.com/gogoclouds/gogo/internal/conf"
+import (
+	"github.com/gogoclouds/gogo/internal/conf"
+	"github.com/patrickmn/go-cache"
+	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
+)
 
-// Conf All 配置
-var Conf *conf.Config
+var (
+	// Conf All 配置
+	Conf *conf.Config
+
+	// CacheLocal 一级缓存 变动小、容量少。容量固定，有淘汰策略。
+	CacheLocal *cache.Cache
+
+	// CacheDB 二级缓存 容量大，有网络IO延迟
+	CacheDB redis.Cmdable
+
+	// DB gorm 关系型数据库 -- 持久化
+	DB *gorm.DB
+)

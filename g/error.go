@@ -2,7 +2,13 @@ package g
 
 import (
 	"errors"
+	"fmt"
 	"runtime/debug"
+)
+
+var (
+	ErrRecordRepeat = errors.New("数据已经存在")
+	ErrDateBusy     = errors.New("数据在使用")
 )
 
 // Error 自定义错误
@@ -14,11 +20,23 @@ type Error struct {
 }
 
 func NewError(message string) *Error {
-	return WrapError(nil, message)
+	return NewErrorf(message)
+}
+
+func NewErrorf(format string, a ...any) *Error {
+	return &Error{
+		Inner:      nil,
+		Text:       fmt.Sprintf(format, a...),
+		StackTrace: string(debug.Stack()),
+		Misc:       make(map[string]any),
+	}
 }
 
 // WrapError new Error
 func WrapError(err error, message string) *Error {
+	if err == nil {
+		return nil
+	}
 	return &Error{
 		Inner:      err,
 		Text:       message,

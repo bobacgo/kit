@@ -38,6 +38,11 @@ func FailCode(c *gin.Context, code r.StatusCode) {
 	c.JSON(http.StatusOK, response.FailCode(code))
 }
 
+// FailCodeDetails 从 statusCode 定义错误提示信息，并带详情信息
+func FailCodeDetails[T any](c *gin.Context, code r.StatusCode, data T) {
+	c.JSON(http.StatusOK, response.FailCodeDetails(code, data))
+}
+
 // FailMsgDetails 自定义错误提示信息和错误细节，默认 code = 5000
 func FailMsgDetails[T any](c *gin.Context, msg string, data T) {
 	c.JSON(http.StatusOK, response.FailMsgDetails(msg, data))

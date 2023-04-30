@@ -2,11 +2,15 @@ package valid
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/locales/zh"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
+	zhTranslations "github.com/go-playground/validator/v10/translations/zh"
 	"github.com/gogoclouds/gogo/logger"
 	"github.com/gogoclouds/gogo/web/gin/reply"
 	"github.com/gogoclouds/gogo/web/r"
+	"reflect"
 	"strings"
 )
 
@@ -27,17 +31,38 @@ func ShouldBind[T any](ctx *gin.Context) (T, bool) {
 	var obj T
 	if err := ctx.ShouldBind(&obj); err != nil {
 		errs, ok := err.(validator.ValidationErrors)
-		if !ok {
-			// 非validator.ValidationErrors类型错误直接返回
+		if !ok { // 非validator.ValidationErrors类型错误直接返回
 			logger.Error(err)
-			reply.FailMsg(ctx, r.FailCreate)
+			reply.FailCodeDetails(ctx, r.ParameterIllegal, err.Error())
 			return obj, false
 		}
 		// validator.ValidationErrors类型错误则进行翻译
-		reply.FailMsgDetails(ctx, r.FailCreate, removeTopStruct(errs.Translate(Trans)))
+		reply.FailCodeDetails(ctx, r.ParameterInvalid, removeTopStruct(errs.Translate(Trans)))
 		return obj, false
 	}
 	return obj, true
+}
+
+// InitRequestParamValidate 初始化翻译器
+func InitRequestParamValidate() {
+	// 修改gin框架中的Validator引擎属性，实现自定制
+	if validate, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		// 注册一个获取json tag的自定义方法
+		validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+			name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+			// skip if tag key says it should be ignored
+			if name == "-" {
+				return ""
+			}
+			return name
+		})
+
+		uni := ut.New(zh.New())
+		Trans, _ = uni.GetTranslator("zh")
+		if err := zhTranslations.RegisterDefaultTranslations(validate, Trans); err != nil {
+			panic(err)
+		}
+	}
 }
 
 // 去掉结构体名称前缀

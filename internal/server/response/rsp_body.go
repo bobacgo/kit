@@ -44,6 +44,11 @@ func FailCode(code r.StatusCode) *Resp {
 	return New(code, r.Status[code])
 }
 
+// FailCodeDetails 从 statusCode 定义错误提示信息，并带详情信息
+func FailCodeDetails[T any](code r.StatusCode, data T) *RespData[T] {
+	return NewWithData(code, r.Status[code], data)
+}
+
 // FailMsgDetails 自定义错误提示信息和错误细节，默认 code = 5000
 func FailMsgDetails[T any](msg string, data T) *RespData[T] {
 	return NewWithData(r.Internal, msg, data)

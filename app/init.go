@@ -3,8 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"strings"
+	"github.com/gogoclouds/gogo/web/gin/valid"
 	"time"
 
 	"github.com/gogoclouds/gogo/internal/db"
@@ -16,13 +15,7 @@ import (
 
 	"github.com/gogoclouds/gogo/g"
 
-	"github.com/gin-gonic/gin/binding"
-	"github.com/go-playground/locales/zh"
-	ut "github.com/go-playground/universal-translator"
-	"github.com/go-playground/validator/v10"
-	zhTranslations "github.com/go-playground/validator/v10/translations/zh"
 	"github.com/gogoclouds/gogo/internal/conf"
-	"github.com/gogoclouds/gogo/web/gin/valid"
 )
 
 type app struct {
@@ -43,7 +36,7 @@ func New(ctx context.Context, configPath string) *app {
 	g.CacheLocal = cache.New(5*time.Minute, 10*time.Minute)
 
 	logger.Initialize(g.Conf.App().Name, g.Conf.Log())
-	initValidate()
+	valid.InitRequestParamValidate()
 	return &app{ctx: ctx, conf: g.Conf}
 }
 
@@ -91,26 +84,4 @@ func (s *app) Run() {
 	ip, _ := util.IP.GetOutBoundIP()
 	fmt.Printf("http://%s:%d/health\n", ip, port)
 	select {}
-}
-
-// initTrans 初始化翻译器
-func initValidate() {
-	// 修改gin框架中的Validator引擎属性，实现自定制
-	if validate, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		// 注册一个获取json tag的自定义方法
-		validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
-			name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
-			// skip if tag key says it should be ignored
-			if name == "-" {
-				return ""
-			}
-			return name
-		})
-
-		uni := ut.New(zh.New())
-		valid.Trans, _ = uni.GetTranslator("zh")
-		if err := zhTranslations.RegisterDefaultTranslations(validate, valid.Trans); err != nil {
-			panic(err)
-		}
-	}
 }

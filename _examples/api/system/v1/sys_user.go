@@ -2,8 +2,8 @@ package v1
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/gogoclouds/gogo/_examples/internal/app/module_one/biz"
-	"github.com/gogoclouds/gogo/_examples/internal/app/module_one/model"
+	"github.com/gogoclouds/gogo/_examples/internal/app/system/biz"
+	"github.com/gogoclouds/gogo/_examples/internal/app/system/model"
 	"github.com/gogoclouds/gogo/logger"
 	"github.com/gogoclouds/gogo/web/gin/reply"
 	"github.com/gogoclouds/gogo/web/gin/valid"

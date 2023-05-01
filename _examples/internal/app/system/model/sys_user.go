@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/gogoclouds/gogo/_examples/internal/app/common"
+	"github.com/gogoclouds/gogo/web/orm"
 	"github.com/gogoclouds/gogo/web/r"
 )
 
@@ -22,7 +23,8 @@ type CreateUserReq struct {
 	Password   string             `json:"password" binding:"required"`
 	RePassword string             `json:"rePassword" binding:"required,eqfield=Password"`
 	Nickname   string             `json:"nickname"`
-	Age        uint8              `json:"age" binding:"gte=1,lte=130"`
+	birthday   orm.LocalTime      `json:"birthday"`
+	Gender     uint8              `json:"gender" binding:"lte=3"` // 0-未知|1-女|2-男
 	Email      string             `json:"email" binding:"required,email"`
 	Phone      string             `json:"phone" binding:"required,number,startswith=1,len=11"`
 	Locality   []*common.Locality `json:"locality" binding:"required,gte=1"`

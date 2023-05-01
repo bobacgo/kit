@@ -2,7 +2,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	v1 "github.com/gogoclouds/gogo/_examples/api/module_one/v1"
+	v1 "github.com/gogoclouds/gogo/_examples/api/system/v1"
 )
 
 func LoadRouter(e *gin.Engine) {

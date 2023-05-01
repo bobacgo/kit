@@ -8,10 +8,10 @@ import (
 // Paginate 分页器
 func Paginate(page r.PageInfo) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		if page.Page == 0 {
+		if page.Page <= 0 {
 			page.Page = 1
 		}
-		if page.PageSize == 0 {
+		if page.PageSize <= 0 {
 			page.PageSize = 10
 		}
 		offset := (page.Page - 1) * page.PageSize

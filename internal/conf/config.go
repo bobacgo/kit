@@ -5,6 +5,8 @@ import (
 	"gopkg.in/yaml.v3"
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 	"sync"
 )
 
@@ -69,7 +71,13 @@ func (c *Config) Config() config {
 }
 
 func (c *Config) readByFile(path string) {
-	bytes, err := os.ReadFile(path)
+	_, file, _, ok := runtime.Caller(3)
+	if !ok {
+		panic("runtime.Caller get path fail")
+	}
+	abs, _ := filepath.Abs(file)
+	fullPath := filepath.Join(filepath.Dir(abs), path)
+	bytes, err := os.ReadFile(fullPath)
 	if err != nil {
 		panic(err)
 	}
@@ -83,4 +91,6 @@ func (c *Config) printConfInfo() {
 	printConf, _ := yaml.Marshal(c.Config())
 	log.Println("======================= load config info ========================")
 	fmt.Println(string(printConf))
+	log.Println("======================= end config info ========================")
+	fmt.Println()
 }

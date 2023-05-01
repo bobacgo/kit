@@ -1,4 +1,4 @@
-package g
+package orm
 
 import (
 	"database/sql/driver"

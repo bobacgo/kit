@@ -10,6 +10,7 @@ var IP = new(addr)
 
 type addr struct{}
 
+// GetOutBoundIP 获取主机本机IP
 func (addr) GetOutBoundIP() (string, error) {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {

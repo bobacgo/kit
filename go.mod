@@ -7,7 +7,9 @@ require (
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.12.0
+	github.com/google/uuid v1.3.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/redis/go-redis/v9 v9.0.3
 	go.uber.org/zap v1.24.0
 	golang.org/x/net v0.9.0
@@ -35,7 +37,6 @@ require (
 	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml/v2 v2.0.7 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect

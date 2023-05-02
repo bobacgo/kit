@@ -24,7 +24,7 @@ func (s *redisServer) Open(ctx context.Context, conf *conf.Config) (cmd redis.Cm
 	if s.wTimeout, err = time.ParseDuration(rConf.WriteTimeout); err != nil {
 		return nil, err
 	}
-	s.addrs = stream.New(rConf.Addr).Distinct().List()
+	s.addrs = stream.New(rConf.Addr).Distinct().Slice()
 
 	if len(rConf.Addr) > 1 { // Multiple nodes are cluster mode
 		return s.clusterMode(ctx)

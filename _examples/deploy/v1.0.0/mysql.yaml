@@ -1,4 +1,4 @@
 data:
   database:
     driver: mysql
-    source: root:root@tcp(mysql-svc:3306)/gogo
+    source: root:root@tcp(mysql-svc:3306)/gogo?charset=utf8&parseTime=True&loc=Local

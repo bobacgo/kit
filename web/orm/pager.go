@@ -20,10 +20,12 @@ func Paginate(page r.PageInfo) func(db *gorm.DB) *gorm.DB {
 }
 
 // PageFind 分页查找
-func PageFind[T any](db *gorm.DB, page r.PageInfo) (list []T, total int64, err error) {
+func PageFind[T any](db *gorm.DB, page r.PageInfo) (data *r.PageResp[T], err error) {
+	var total int64
 	if err = db.Count(&total).Error; err != nil && total == 0 {
-		return list, int64(len(list)), err
+		return
 	}
+	var list []T
 	err = db.Scopes(Paginate(page)).Find(&list).Error
-	return
+	return r.NewPage(list, page.Page, int(total), page.PageSize), err
 }

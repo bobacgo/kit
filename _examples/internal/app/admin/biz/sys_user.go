@@ -1,8 +1,8 @@
 package biz
 
 import (
-	"github.com/gogoclouds/gogo/_examples/internal/app/system/dao"
-	"github.com/gogoclouds/gogo/_examples/internal/app/system/model"
+	"github.com/gogoclouds/gogo/_examples/internal/app/admin/dao"
+	"github.com/gogoclouds/gogo/_examples/internal/app/admin/model"
 	"github.com/gogoclouds/gogo/g"
 	"github.com/gogoclouds/gogo/web/r"
 )

@@ -71,7 +71,7 @@ func (c *Config) Config() config {
 }
 
 func (c *Config) readByFile(path string) {
-	_, file, _, ok := runtime.Caller(3)
+	_, file, _, ok := runtime.Caller(4)
 	if !ok {
 		panic("runtime.Caller get path fail")
 	}

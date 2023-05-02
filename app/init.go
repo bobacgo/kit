@@ -40,21 +40,25 @@ func New(ctx context.Context, configPath string) *app {
 	return &app{ctx: ctx, conf: g.Conf}
 }
 
-// OpenDB connect DB
-//
-// tableModel struct 数据库表
-func (s *app) OpenDB(tableModel []any) *app {
+// Database connect DB
+func (s *app) Database() *app {
 	var err error
 	if g.DB, err = db.Server.NewDB(s.ctx, s.conf); err != nil {
-		panic(err)
-	}
-	if err = db.Server.AutoMigrate(g.DB, tableModel); err != nil {
 		panic(err)
 	}
 	return s
 }
 
-func (s *app) OpenCacheDB() *app {
+// AutoMigrate create data table
+// tableModel struct 数据库表
+func (s *app) AutoMigrate(tableModel []any) *app {
+	if err := db.Server.AutoMigrate(g.DB, tableModel); err != nil {
+		panic(err)
+	}
+	return s
+}
+
+func (s *app) Cache() *app {
 	var err error
 	if g.CacheDB, err = db.Redis.Open(s.ctx, s.conf); err != nil {
 		panic(err)
@@ -62,14 +66,14 @@ func (s *app) OpenCacheDB() *app {
 	return s
 }
 
-func (s *app) CreateHttpServer(router server.RegisterHttpFn) *app {
+func (s *app) HTTP(router server.RegisterHttpFn) *app {
 	httpConf := s.conf.App().Server.Http
 	s.enableHttp = true
 	go server.RunHttpServer(httpConf.Addr, router)
 	return s
 }
 
-func (s *app) CreateRpcServer(router server.RegisterRpcFn) *app {
+func (s *app) RPC(router server.RegisterRpcFn) *app {
 	rpcConf := s.conf.App().Server.Rpc
 	s.enableRpc = true
 	go server.RunRpcServer(rpcConf.Addr, router)

@@ -141,8 +141,8 @@ func (s Stream[T]) Each(fn func(i int, o T)) {
 	}
 }
 
-// List stream to slice
-func (s Stream[T]) List() (arr []T) {
+// Slice stream to slice
+func (s Stream[T]) Slice() (arr []T) {
 	for v := range s {
 		arr = append(arr, v)
 	}

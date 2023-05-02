@@ -1,8 +1,9 @@
 package stream_test
 
 import (
-	"github.com/gogoclouds/gogo/pkg/stream"
 	"testing"
+
+	"github.com/gogoclouds/gogo/pkg/stream"
 )
 
 type person struct {
@@ -31,7 +32,7 @@ func TestDistinct(t *testing.T) {
 			return str != "redis"
 		}).
 		Distinct().
-		List()
+		Slice()
 	t.Log(sd) // [mysql redis]
 
 	p := []person{
@@ -39,6 +40,6 @@ func TestDistinct(t *testing.T) {
 		{"fei.zhang", 18},
 		{"bei.liu", 22},
 	}
-	pd := stream.Of(p...).Distinct().List()
+	pd := stream.Of(p...).Distinct().Slice()
 	t.Log(pd) // [{fei.zhang 18} {bei.liu 22}]
 }

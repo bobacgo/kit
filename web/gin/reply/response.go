@@ -16,6 +16,21 @@ func Success(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Success())
 }
 
+// SuccessCreate 创建成功
+func SuccessCreate(c *gin.Context) {
+	c.JSON(http.StatusOK, response.SuccessCreate())
+}
+
+// SuccessUpdate 更新成功
+func SuccessUpdate(c *gin.Context) {
+	c.JSON(http.StatusOK, response.SuccessUpdate())
+}
+
+// SuccessDelete 删除成功
+func SuccessDelete(c *gin.Context) {
+	c.JSON(http.StatusOK, response.SuccessDelete())
+}
+
 // SuccessMsg 自定义 提示消息
 func SuccessMsg(c *gin.Context, msg string) {
 	c.JSON(http.StatusOK, response.SuccessMsg(msg))
@@ -24,6 +39,11 @@ func SuccessMsg(c *gin.Context, msg string) {
 // SuccessData 使用默认提示消息，并携带数据
 func SuccessData[T any](c *gin.Context, data T) {
 	c.JSON(http.StatusOK, response.SuccessData(data))
+}
+
+// SuccessMsgData 自定义提示消息，并携带数据
+func SuccessMsgData[T any](c *gin.Context, msg string, data T) {
+	c.JSON(http.StatusOK, response.SuccessMsgData(msg, data))
 }
 
 // 失败响应 部分 --------

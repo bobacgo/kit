@@ -22,6 +22,21 @@ func Success() *Resp {
 	return New(r.Ok, r.Status[r.Ok])
 }
 
+// SuccessCreate 创建成功
+func SuccessCreate() *Resp {
+	return New(r.Ok, r.OKCreate)
+}
+
+// SuccessUpdate 更新成功
+func SuccessUpdate() *Resp {
+	return New(r.Ok, r.OKUpdate)
+}
+
+// SuccessDelete 删除成功
+func SuccessDelete() *Resp {
+	return New(r.Ok, r.OKDelete)
+}
+
 // SuccessMsg 自定义 提示消息
 func SuccessMsg(msg string) *Resp {
 	return New(r.Ok, msg)
@@ -30,6 +45,11 @@ func SuccessMsg(msg string) *Resp {
 // SuccessData 使用默认提示消息，并携带数据
 func SuccessData[T any](data T) *RespData[T] {
 	return NewWithData(r.Ok, r.Status[r.Ok], data)
+}
+
+// SuccessMsgData 自定义提示消息，并携带数据
+func SuccessMsgData[T any](msg string, data T) *RespData[T] {
+	return NewWithData(r.Ok, msg, data)
 }
 
 // 失败响应 部分 --------

@@ -12,3 +12,4 @@ app:
   configFileNames: ['common.yaml', 'mysql.yaml', 'redis.yaml']
   serviceKV: # 应用的业务自定义配置
     authenticationKey: xxx-xxx-xx
+    salt: gogo@123

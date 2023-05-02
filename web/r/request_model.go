@@ -1,19 +1,14 @@
 package r
 
 type PageInfo struct {
-	Page     int    `json:"page" form:"page" binding:"gte=1"`         // 页码
-	PageSize int    `json:"pageSize" form:"pageSize" binding:"gte=1"` // 每页大小
-	Keyword  string `json:"keyword" form:"keyword"`                   //关键字
+	Page     int `json:"page" form:"page" binding:"gte=1"`         // 页码
+	PageSize int `json:"pageSize" form:"pageSize" binding:"gte=1"` // 每页大小
 }
 
-type GetById struct {
-	ID int `json:"id" form:"id"` // 主键ID
-}
-
-func (r *GetById) UintID() uint {
-	return uint(r.ID)
+type IdReq struct {
+	ID string `json:"id" form:"id" binding:"required"`
 }
 
 type IdsReq struct {
-	Ids []int `json:"ids" form:"ids"`
+	Ids []string `json:"ids" form:"ids" binding:"gte=1"`
 }

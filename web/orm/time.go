@@ -3,12 +3,13 @@ package orm
 import (
 	"database/sql/driver"
 	"fmt"
+	"github.com/gogoclouds/gogo/g"
 	"time"
 )
 
 const (
-	TimeYYYYMMss  = "2006-01-02 15:04:05"
-	TimeLocalZone = "Asia/Shanghai"
+	DefaultTimeFormat = "2006-01-02 15:04:05"
+	TimeLocalZone     = "Asia/Shanghai"
 )
 
 type LocalTime time.Time
@@ -35,19 +36,28 @@ func (t LocalTime) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	b := make([]byte, 0, len(TimeYYYYMMss)+2)
+	b := make([]byte, 0, len(t.Format())+2)
 	b = append(b, '"')
-	b = tlt.AppendFormat(b, TimeYYYYMMss)
+	b = tlt.AppendFormat(b, t.Format())
 	b = append(b, '"')
 	return b, nil
 }
 
 func (t *LocalTime) UnmarshalJSON(data []byte) (err error) {
-	now, err := time.ParseInLocation(TimeYYYYMMss, string(data), time.Local)
+	now, err := time.ParseInLocation(`"`+t.Format()+`"`, string(data), time.Local)
 	*t = LocalTime(now)
 	return
 }
 
 func (t LocalTime) String() string {
-	return time.Time(t).Local().Format(TimeYYYYMMss)
+	return time.Time(t).Local().Format(t.Format())
+}
+
+// Format 从配置文件获取时间格式
+func (t LocalTime) Format() string {
+	tf := DefaultTimeFormat
+	if g.Conf != nil && g.Conf.App().TimeFormat != "" {
+		tf = g.Conf.App().TimeFormat
+	}
+	return tf
 }

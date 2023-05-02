@@ -15,6 +15,7 @@ type config struct {
 type App struct {
 	Name            string   // 服务名
 	Version         string   // 版本号
+	TimeFormat      string   `yaml:"timeFormat"`
 	ConfigFileNames []string `yaml:"configFileNames"`
 	Server          struct {
 		Http Transport

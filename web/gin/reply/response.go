@@ -16,6 +16,11 @@ func Success(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Success())
 }
 
+// SuccessRead 获取成功
+func SuccessRead[T any](c *gin.Context, data T) {
+	c.JSON(http.StatusOK, response.SuccessRead(data))
+}
+
 // SuccessCreate 创建成功
 func SuccessCreate(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessCreate())

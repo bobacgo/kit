@@ -22,6 +22,10 @@ func Success() *Resp {
 	return New(r.Ok, r.Status[r.Ok])
 }
 
+func SuccessRead[T any](data T) *RespData[T] {
+	return NewWithData(r.Ok, r.OkRead, data)
+}
+
 // SuccessCreate 创建成功
 func SuccessCreate() *Resp {
 	return New(r.Ok, r.OKCreate)

@@ -27,5 +27,12 @@ func PageFind[T any](db *gorm.DB, page r.PageInfo) (data *r.PageResp[T], err err
 	}
 	var list []T
 	err = db.Scopes(Paginate(page)).Find(&list).Error
-	return r.NewPage(list, page.Page, int(total), page.PageSize), err
+	data = r.NewPage(list, int(total), page.Page, page.PageSize)
+	return
+}
+
+// PageAnyFind 分页查找
+func PageAnyFind[T any](db *gorm.DB, page r.PageInfo) (*r.PageAnyResp, error) {
+	p, err := PageFind[T](db, page)
+	return r.NewPageAny(p.List, p.Total, page.Page, page.PageSize), err
 }

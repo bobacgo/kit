@@ -23,6 +23,6 @@ func TestLogger(t *testing.T) {
 	logger.Error("The is ", "Error")
 
 	logger.Debugf("The is %s", "Debugf")
-	logger.Info("The is %s", "Info")
+	logger.Infof("The is %s", "Info")
 	logger.Errorf("The is %s", "Errorf")
 }

@@ -11,8 +11,10 @@ require (
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/redis/go-redis/v9 v9.0.3
+	github.com/sony/sonyflake v1.1.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.8.0
+	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea
 	golang.org/x/net v0.9.0
 	google.golang.org/grpc v1.54.0
 	gopkg.in/yaml.v3 v3.0.1

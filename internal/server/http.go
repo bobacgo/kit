@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/gogoclouds/gogo/web/gin/middleware"
 	"net/http"
 
 	"github.com/gogoclouds/gogo/g"
@@ -16,6 +17,7 @@ func RunHttpServer(addr string, register RegisterHttpFn) {
 	e := gin.New()
 	e.Use(gin.Logger()) // TODO -> zap.Logger
 	e.Use(gin.Recovery())
+	e.Use(middleware.LoggerResponseFail())
 	healthApi(e) // provide health API
 	register(e)
 	if err := e.Run(addr); err != nil {

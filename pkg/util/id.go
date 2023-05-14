@@ -2,6 +2,7 @@ package util
 
 import (
 	"github.com/google/uuid"
+	"github.com/sony/sonyflake"
 	"math/rand"
 	"strings"
 	"time"
@@ -26,6 +27,17 @@ func RandSeqID(n int) func() string {
 func UUID() string {
 	newId := strings.ReplaceAll(uuid.NewString(), "-", "")
 	return newId
+}
+
+func Snowflake(startTime time.Time, machineID uint16) *sonyflake.Sonyflake {
+	st := sonyflake.Settings{
+		//StartTime: startTime,
+		//MachineID: func() (uint16, error) {
+		//	return machineID, nil
+		//},
+	}
+	sf := sonyflake.NewSonyflake(st)
+	return sf
 }
 
 // RandNumber 指定范围的随机数

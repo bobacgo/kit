@@ -41,7 +41,7 @@ func (*UniqueService[T]) Verify(tx *gorm.DB, q map[string]any) *Error {
 	if len(list) > 0 {
 		msg := make(map[string]any, 0)
 		for _, m := range list {
-			if q["id"] != "" && q["id"] == m["id"] { // 注意：id 值类型 string, 更新唯一校验，排除自身
+			if q["id"] != nil && q["id"] == m["id"] { // 注意：id 值类型 string, 更新唯一校验，排除自身
 				continue
 			}
 			for k, v := range q {

@@ -95,5 +95,5 @@ func makeFileName(path, name string) string {
 		name = defLoggerFilenamePrefix
 	}
 	nowTime := time.Now().Format("2006-01-02-150405")
-	return fmt.Sprintf(".%s/%s-%s.log", path, name, nowTime)
+	return fmt.Sprintf("%s/%s-%s.log", path, name, nowTime)
 }

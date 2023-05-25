@@ -13,7 +13,7 @@ func init() {
 		Level:       "debug", // debug | info | error
 		FileSizeMax: 10,      // 10 MB
 		FileAgeMax:  10,      // 10d
-		DirPath:     "/logs",
+		DirPath:     "logs",
 	})
 }
 

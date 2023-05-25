@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"github.com/gogoclouds/gogo/enum"
 	"github.com/gogoclouds/gogo/internal/conf"
 	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
@@ -12,7 +13,9 @@ import (
 	"time"
 )
 
-var Log *zap.SugaredLogger
+func L() *zap.SugaredLogger {
+	return zap.S()
+}
 
 // 从配置文件映射结构
 
@@ -35,7 +38,8 @@ func Initialize(appName string, conf conf.Log) {
 		level2Int(conf.Level),
 	)
 	core = zapcore.NewTee(core, outputConsole)
-	Log = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1)).Sugar()
+	l := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
+	zap.ReplaceGlobals(l)
 }
 
 func setConsoleEncoder() zapcore.Encoder {
@@ -56,16 +60,14 @@ func setEncoderConf() zapcore.EncoderConfig {
 	return ec
 }
 
-// 可选 debug | info | error
 // 默认 info
-func level2Int(level string) zapcore.Level {
-	level = strings.ToLower(level)
+func level2Int(level enum.LoggerLevel) zapcore.Level {
 	switch level {
-	case "debug":
+	case enum.LoggerLevel_Debug:
 		return zapcore.DebugLevel
-	case "info":
+	case enum.LoggerLevel_Info:
 		return zapcore.InfoLevel
-	case "error":
+	case enum.LoggerLevel_Error:
 		return zapcore.ErrorLevel
 	default:
 		log.Printf("No such level log: %s", level)

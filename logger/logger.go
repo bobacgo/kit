@@ -5,25 +5,25 @@ import (
 )
 
 func Info(args ...interface{}) {
-	logger.Log.Info(args...)
+	logger.L().Info(args...)
 }
 
 func Infof(template string, args ...interface{}) {
-	logger.Log.Infof(template, args...)
+	logger.L().Infof(template, args...)
 }
 
 func Error(args ...interface{}) {
-	logger.Log.Error(args...)
+	logger.L().Error(args...)
 }
 
 func Errorf(template string, args ...interface{}) {
-	logger.Log.Errorf(template, args...)
+	logger.L().Errorf(template, args...)
 }
 
 func Debug(args ...interface{}) {
-	logger.Log.Debug(args...)
+	logger.L().Debug(args...)
 }
 
 func Debugf(template string, args ...interface{}) {
-	logger.Log.Debugf(template, args...)
+	logger.L().Debugf(template, args...)
 }

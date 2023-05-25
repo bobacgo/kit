@@ -1,5 +1,9 @@
 package conf
 
+import (
+	"github.com/gogoclouds/gogo/enum"
+)
+
 type config struct {
 	App  App
 	Log  Log
@@ -13,8 +17,9 @@ type config struct {
 
 // App 应用服务相关配置信息
 type App struct {
-	Name            string   // 服务名
-	Version         string   // 版本号
+	Name            string // 服务名
+	Version         string // 版本号
+	Env             enum.EnvType
 	TimeFormat      string   `yaml:"timeFormat"`
 	ConfigFileNames []string `yaml:"configFileNames"`
 	Server          struct {
@@ -36,10 +41,10 @@ type Transport struct {
 //
 // 日志文件名 xxx/logs/${App.Service}-2006-01-01-150405.log
 type Log struct {
-	Level       string // 日志级别 默认值是 info
-	FileSizeMax uint16 `yaml:"fileSizeMax"`             // 单位是MB 默认值是 10MB
-	FileAgeMax  uint16 `yaml:"fileAgeMax"`              // 留存天数
-	DirPath     string `validator:"dir" yaml:"dirPath"` // 日志文件夹路径 默认 ./logs
+	Level       enum.LoggerLevel // 日志级别 默认值是 info
+	FileSizeMax uint16           `yaml:"fileSizeMax"`             // 单位是MB 默认值是 10MB
+	FileAgeMax  uint16           `yaml:"fileAgeMax"`              // 留存天数
+	DirPath     string           `validator:"dir" yaml:"dirPath"` // 日志文件夹路径 默认 ./logs
 }
 
 // ------------- data ----------------

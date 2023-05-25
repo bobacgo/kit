@@ -1,15 +1,18 @@
 package server_test
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/gogoclouds/gogo/internal/server"
 	"io"
 	"net/http"
 	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gogoclouds/gogo/internal/server"
 )
 
 func Test_HttpServer(t *testing.T) {
-	server.RunHttpServer(":8080", router)
+	exitHttp := make(chan struct{})
+	doneExitHttp := make(chan struct{})
+	server.RunHttpServer(exitHttp, doneExitHttp, ":8080", router)
 }
 
 func Test_HttpApi(t *testing.T) {

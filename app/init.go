@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/gogoclouds/gogo/web/gin/valid"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gogoclouds/gogo/internal/db"
@@ -19,10 +21,14 @@ import (
 )
 
 type app struct {
-	ctx        context.Context
-	conf       *conf.Config
-	enableRpc  bool
-	enableHttp bool
+	ctx         context.Context
+	conf        *conf.Config
+	enableRpc   bool
+	doneExitRpc chan struct{}
+
+	enableHttp   bool
+	exitHttp     chan struct{}
+	doneExitHttp chan struct{}
 }
 
 // New().OpenDB().OpenCacheDB().CreateXxxServer().Run()
@@ -32,6 +38,7 @@ type app struct {
 // 2. 启动服务
 // 3. 初始必要的全局参数
 func New(ctx context.Context, configPath string) *app {
+
 	g.Conf = conf.New(configPath)
 	g.CacheLocal = cache.New(5*time.Minute, 10*time.Minute)
 
@@ -69,23 +76,39 @@ func (s *app) Cache() *app {
 func (s *app) HTTP(router server.RegisterHttpFn) *app {
 	httpConf := s.conf.App().Server.Http
 	s.enableHttp = true
-	go server.RunHttpServer(httpConf.Addr, router)
+	s.exitHttp = make(chan struct{})
+	s.doneExitHttp = make(chan struct{})
+	go server.RunHttpServer(s.exitHttp, s.doneExitHttp, httpConf.Addr, router)
 	return s
 }
 
 func (s *app) RPC(router server.RegisterRpcFn) *app {
 	rpcConf := s.conf.App().Server.Rpc
 	s.enableRpc = true
-	go server.RunRpcServer(rpcConf.Addr, router)
+	s.doneExitRpc = make(chan struct{})
+	go server.RunRpcServer(s.doneExitRpc, rpcConf.Addr, router)
 	return s
 }
 
 func (s *app) Run() {
+	// Create context that listens for the interrupt signal from the OS.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	var port uint16
 	if s.enableHttp {
 		_, port = util.IP.Parse(s.conf.App().Server.Http.Addr)
+		ip, _ := util.IP.GetOutBoundIP()
+		fmt.Printf("http://%s:%d/health\n", ip, port)
 	}
-	ip, _ := util.IP.GetOutBoundIP()
-	fmt.Printf("http://%s:%d/health\n", ip, port)
-	select {}
+
+	// Listen for the interrupt signal.
+	<-ctx.Done()
+	if s.enableHttp {
+		close(s.exitHttp)
+		<-s.doneExitHttp
+	}
+	if s.enableRpc {
+		<-s.doneExitRpc
+	}
 }

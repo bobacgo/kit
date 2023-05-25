@@ -7,17 +7,19 @@ import (
 	"net"
 )
 
-// RPC server
+// RegisterRpcFn RPC server
 type RegisterRpcFn func(server *grpc.Server)
 
-func RunRpcServer(addr string, register RegisterRpcFn) {
+func RunRpcServer(done chan<- struct{}, addr string, register RegisterRpcFn) {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		panic(err)
 	}
-	server := grpc.NewServer()
-	register(server)
-	if err = server.Serve(lis); err != nil {
+	s := grpc.NewServer()
+	defer close(done)
+	defer s.GracefulStop() // 优雅停止
+	register(s)
+	if err = s.Serve(lis); err != nil {
 		panic(err)
 	}
 }

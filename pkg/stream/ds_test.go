@@ -43,3 +43,15 @@ func TestDistinct(t *testing.T) {
 	pd := stream.Of(p...).Distinct().Slice()
 	t.Log(pd) // [{fei.zhang 18} {bei.liu 22}]
 }
+
+func TestDistinctFn(t *testing.T) {
+	p := []person{
+		{"fei.zhang", 19},
+		{"fei.zhang", 18},
+		{"bei.liu", 22},
+	}
+	pd := stream.New(p).DistinctFn(func(o person) any {
+		return o.Name
+	}).Slice()
+	t.Log(pd) // [{fei.zhang 18} {bei.liu 22}]
+}

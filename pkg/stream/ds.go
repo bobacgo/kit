@@ -63,6 +63,23 @@ func (s Stream[T]) Distinct() Stream[T] {
 	return ch
 }
 
+// DistinctFn 去重
+func (s Stream[T]) DistinctFn(fn func(o T) any) Stream[T] {
+	ch := make(chan T)
+	go func() {
+		m := make(map[any]struct{})
+		for v := range s {
+			f := fn(v)
+			if _, ok := m[f]; !ok {
+				ch <- v
+				m[f] = ptr
+			}
+		}
+		close(ch)
+	}()
+	return ch
+}
+
 // Filter 过滤
 func (s Stream[T]) Filter(fn func(o T) bool) Stream[T] {
 	ch := make(chan T)

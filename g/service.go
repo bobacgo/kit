@@ -35,7 +35,7 @@ func (*UniqueService[T]) Verify(tx *gorm.DB, q map[string]any) *Error {
 		}
 	}
 	var list []map[string]any
-	if err := tx.Find(&list).Error; err != nil {
+	if err := tx.Limit(len(q)).Find(&list).Error; err != nil {
 		return WrapError(err, "校验唯一出错")
 	}
 	if len(list) > 0 {

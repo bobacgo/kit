@@ -50,6 +50,7 @@ type Log struct {
 // ------------- data ----------------
 
 type Database struct {
+	DryRun bool
 	Driver string // mysql
 	Source string // root:root@tcp(127.0.0.1:3306)/test
 }

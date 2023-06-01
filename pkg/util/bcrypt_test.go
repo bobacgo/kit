@@ -8,6 +8,6 @@ import (
 func TestExample(t *testing.T) {
 	hash, salt := BcryptHash("gogo")
 	fmt.Println(salt, hash)
-	verify := BcryptVerify(hash, "gogo", salt)
+	verify := BcryptVerify(salt, hash, "gogo")
 	t.Logf("verify: %v\n", verify)
 }

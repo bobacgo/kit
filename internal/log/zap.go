@@ -7,7 +7,6 @@ import (
 	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -62,17 +61,11 @@ func setEncoderConf() zapcore.EncoderConfig {
 
 // 默认 info
 func level2Int(level enum.LoggerLevel) zapcore.Level {
-	switch level {
-	case enum.LoggerLevel_Debug:
-		return zapcore.DebugLevel
-	case enum.LoggerLevel_Info:
-		return zapcore.InfoLevel
-	case enum.LoggerLevel_Error:
-		return zapcore.ErrorLevel
-	default:
-		log.Printf("No such level log: %s", level)
-		return zapcore.InfoLevel
+	var zapLevel zapcore.Level
+	if err := zapLevel.UnmarshalText([]byte(level)); err != nil {
+		zapLevel = zapcore.InfoLevel
 	}
+	return zapLevel
 }
 
 func setLoggerWriter(appName string, conf conf.Log) zapcore.WriteSyncer {

@@ -1,8 +1,8 @@
 package g
 
 import (
+	"github.com/bobacgo/kit/web/r/page"
 	"github.com/gin-gonic/gin"
-	"github.com/gogoclouds/gogo/web/r"
 )
 
 type IBaseApi interface {
@@ -13,7 +13,7 @@ type IBaseApi interface {
 }
 
 type IBase[T any, Q any] interface {
-	PageList(Q) (*r.PageResp[T], *Error)
+	PageList(Q) (*page.Data[T], *Error)
 	Create(T) *Error
 	Update(T) *Error
 	Delete(int) *Error

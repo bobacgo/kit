@@ -3,8 +3,9 @@ package orm
 import (
 	"database/sql/driver"
 	"fmt"
-	"github.com/gogoclouds/gogo/g"
 	"time"
+
+	"github.com/bobacgo/kit/g"
 )
 
 const (
@@ -59,8 +60,8 @@ func (t LocalTime) String() string {
 // Format 从配置文件获取时间格式
 func (t LocalTime) Format() string {
 	tf := DefaultTimeFormat
-	if g.Conf != nil && g.Conf.App().TimeFormat != "" {
-		tf = g.Conf.App().TimeFormat
+	if g.Conf != nil && g.Conf.Logger.TimeFormat != "" {
+		tf = g.Conf.Logger.TimeFormat
 	}
 	return tf
 }

@@ -2,7 +2,7 @@ package g
 
 import (
 	"errors"
-	"github.com/gogoclouds/gogo/web/r"
+
 	"golang.org/x/exp/maps"
 	"gorm.io/gorm"
 )
@@ -13,9 +13,10 @@ func (*FindByIDService[T]) FindByID(tx *gorm.DB, id string) (T, *Error) {
 	var m T
 	err := tx.Where("id = ?", id).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return m, WrapError(err, r.FailRecordNotFound)
+		// return m, WrapError(err, r.FailRecordNotFound)
 	}
-	return m, WrapError(err, r.FailRead)
+	// return m, WrapError(err, r.FailRead)
+	return m, nil
 }
 
 // UniqueService 校验传入值是否已经在数据库中存在

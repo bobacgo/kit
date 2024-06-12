@@ -1,7 +1,7 @@
 package orm
 
 import (
-	"github.com/gogoclouds/gogo/pkg/util"
+	"github.com/bobacgo/kit/pkg/uid"
 	"gorm.io/gorm"
 )
 
@@ -26,6 +26,6 @@ type Model struct {
 }
 
 func (u *Model) BeforeCreate(tx *gorm.DB) error {
-	u.ID = util.UUID()
+	u.ID = uid.UUID()
 	return nil
 }

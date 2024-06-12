@@ -3,7 +3,7 @@ package stream_test
 import (
 	"testing"
 
-	"github.com/gogoclouds/gogo/pkg/stream"
+	"github.com/bobacgo/kit/pkg/stream"
 )
 
 type person struct {

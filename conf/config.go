@@ -9,8 +9,6 @@ import (
 	"github.com/bobacgo/kit/types"
 )
 
-var Cfg Basic
-
 type ServiceConfig[T any] struct {
 	Basic   `mapstructure:",squash"`
 	Service T `mapstructure:"service"` // 应用自己的其他配置

@@ -2,6 +2,7 @@ package kit
 
 import (
 	"context"
+	"log"
 	"log/slog"
 	"net"
 	"os"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/bobacgo/kit/pkg/network"
 	"github.com/bobacgo/kit/pkg/uid"
+	"golang.org/x/sync/errgroup"
 )
 
 type App struct {
@@ -22,12 +24,17 @@ type App struct {
 }
 
 func New(opts ...Option) *App {
+	wg, _ := errgroup.WithContext(context.Background())
 	o := Options{
 		appid: uid.UUID(),
 		sigs:  []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT},
+		wg:    wg,
 	}
 	for _, opt := range opts {
 		opt(&o)
+	}
+	if err := o.wg.Wait(); err != nil { // 等待 options 实例化结束
+		log.Panic(err)
 	}
 	return &App{
 		opts:   o,

@@ -21,6 +21,10 @@ func (bs ByteSize) Check() error {
 	return err
 }
 
+func (bs ByteSize) ToInt() (int64, error) {
+	return ParseByteUnit(string(bs))
+}
+
 // 将正则表达式编译为包级别的变量，避免每次调用时重复编译
 var numRegexp = regexp.MustCompile("[0-9]+")
 

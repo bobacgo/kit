@@ -1,11 +1,9 @@
 package cache
 
 import (
-	"fmt"
-	"regexp"
-	"strconv"
-	"strings"
 	"time"
+
+	"github.com/bobacgo/kit/types"
 )
 
 // https://zhuanlan.zhihu.com/p/635603181
@@ -27,34 +25,8 @@ type Cache interface {
 	Keys() int64
 }
 
-var defaultSize = "512M"
+var defaultSize types.ByteSize = "512M"
 
 func DefaultCache() (Cache, error) {
 	return NewFreeCache(defaultSize)
-}
-
-func parseUnit(memSize string) (int, error) {
-	re, _ := regexp.Compile("[0-9]+")
-	loc := re.FindStringIndex(memSize)
-	if len(loc) != 2 {
-		return 0, fmt.Errorf("unit parse not exist: %s len(loc) = %d", memSize, len(loc))
-	}
-	num, _ := strconv.Atoi(memSize[:loc[1]])
-	unit := strings.ToUpper(memSize[loc[1]:])
-	switch unit {
-	case "B":
-		return num, nil
-	case "KB", "K":
-		return num << 10, nil
-	case "MB", "M":
-		return num << 20, nil
-	case "GB", "G":
-		return num << 30, nil
-	case "TB", "T":
-		return num << 40, nil
-	case "PB", "P":
-		return num << 50, nil
-	default:
-		return 0, fmt.Errorf("unit parse not exist: %s -> %s", memSize, memSize[loc[1]:])
-	}
 }

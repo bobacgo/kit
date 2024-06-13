@@ -5,7 +5,10 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/pkg/errors"
+
 	"github.com/fsnotify/fsnotify"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/bobacgo/kit/cache"
 	"github.com/bobacgo/kit/conf"
@@ -25,10 +28,12 @@ type Options struct {
 	appid string      // 应用程序启动实例ID
 	sigs  []os.Signal // 监听的程序退出信号
 
-	conf       *conf.Basic
+	conf *conf.Basic
+
+	wg         *errgroup.Group
 	localCache cache.Cache
 	redis      redis.UniversalClient
-	db         *db.SourceManager
+	db         *db.DBManager
 
 	httpServer func(e *gin.Engine, a *Options)
 	rpcServer  func(s *grpc.Server, a *Options)
@@ -50,7 +55,7 @@ func (o Options) LocalCache() cache.Cache {
 }
 
 // DB 获取数据库连接
-func (o Options) DB() *db.SourceManager {
+func (o Options) DB() *db.DBManager {
 	return o.db
 }
 
@@ -103,37 +108,53 @@ func WithLogger() Option {
 
 func WithMustLocalCache() Option {
 	return func(o *Options) {
-		var err error
-		o.localCache, err = cache.DefaultCache()
-		if err != nil {
-			log.Panic(err)
-		}
-		slog.Info("[local_cache] init done.")
+		o.wg.Go(func() error {
+			var err error
+			o.localCache, err = cache.DefaultCache()
+			if err != nil {
+				return errors.Wrap(err, "init local cache failed")
+			}
+			g.CacheLocal = o.localCache
+			slog.Info("[local_cache] init done.")
+			return nil
+		})
 	}
 }
 
 func WithMustRedis() Option {
 	return func(o *Options) {
-		var err error
-		o.redis, err = cache.NewRedis(o.conf.Redis)
-		if err != nil {
-			log.Panic(err.Error())
-		}
-		slog.Info("[redis] init done.")
+		o.wg.Go(func() error {
+			var err error
+			o.redis, err = cache.NewRedis(o.conf.Redis)
+			if err != nil {
+				return errors.Wrap(err, "init redis failed")
+			}
+			g.CacheDB = o.redis
+			slog.Info("[redis] init done.")
+			return nil
+		})
 	}
 }
 
 func WithMustDB() Option {
 	return func(o *Options) {
-		smMap := make(map[string]db.InstanceConfig, len(o.conf.DB))
-		for k, c := range o.conf.DB {
-			smMap[k] = db.InstanceConfig{
-				Driver: mysql.Open(c.Source), // TODO 支持其他数据库类型
-				Config: c,
+		o.wg.Go(func() error {
+			smMap := make(map[string]db.InstanceConfig, len(o.conf.DB))
+			for k, c := range o.conf.DB {
+				smMap[k] = db.InstanceConfig{
+					Driver: mysql.Open(c.Source), // TODO 支持其他数据库类型
+					Config: c,
+				}
 			}
-		}
-		o.db = db.NewSourceManager(smMap)
-		slog.Info("[mysql] init done.")
+			var err error
+			o.db, err = db.NewDBManager(smMap)
+			if err != nil {
+				return errors.Wrap(err, "init db manager failed")
+			}
+			g.DB = o.db
+			slog.Info("[database] init done.")
+			return nil
+		})
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bobacgo/kit/types"
 	"github.com/coocood/freecache"
 )
 
@@ -15,13 +16,13 @@ type freeCache struct {
 
 var _ Cache = (*freeCache)(nil)
 
-func NewFreeCache(maxMemorySize string) (Cache, error) {
-	size, err := parseUnit(maxMemorySize)
+func NewFreeCache(maxMemorySize types.ByteSize) (Cache, error) {
+	size, err := maxMemorySize.ToInt()
 	if err != nil {
 		return nil, err
 	}
 	return &freeCache{
-		cache: freecache.NewCache(size),
+		cache: freecache.NewCache(int(size)),
 	}, nil
 }
 

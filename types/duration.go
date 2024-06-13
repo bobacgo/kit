@@ -13,3 +13,7 @@ func (d Duration) Check() error {
 	_, err := time.ParseDuration(string(d))
 	return err
 }
+
+func (d Duration) ToTimeDuration() time.Duration {
+	return d.TimeDuration()
+}

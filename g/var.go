@@ -1,9 +1,9 @@
 package g
 
 import (
-	"github.com/bobacgo/kit/cache"
-	"github.com/bobacgo/kit/conf"
-	"github.com/bobacgo/kit/db"
+	"github.com/bobacgo/kit/app/cache"
+	"github.com/bobacgo/kit/app/conf"
+	"github.com/bobacgo/kit/app/db"
 	"github.com/redis/go-redis/v9"
 )
 

@@ -1,0 +1,32 @@
+name: examples-service
+version: '1.0.0'
+env: dev
+configs:
+  - ./deploy/v1.0.0/db.yaml
+  - ./deploy/v1.0.0/logger.yaml
+  - ./deploy/v1.0.0/redis.yaml
+server:
+  http:
+    addr: '0.0.0.0:8080'
+    timeout: 1s
+  rpc:
+    addr: '0.0.0.0:9080'
+    timeout: 1s
+security:
+  ciphertext:
+    isCiphertext: false
+    cipherKey: YpC5wIRf4ZuMvd4f
+  jwt:
+    secret: YpC5wIRf4ZuMvd4f
+    issuer: gogo-admin
+    cacheKeyPrefix: "admin:login_token"
+localCache:
+  maxSize: 500MB
+# 业务相关
+service:
+  errAttemptLimit: 5
+
+# ====================================
+# registry
+registry:
+  addr: '127.0.0.1:2379'

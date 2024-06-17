@@ -6,7 +6,7 @@ import (
 	"github.com/bobacgo/kit/web/r/errs"
 	"github.com/gin-gonic/gin"
 
-	cvalidator "github.com/bobacgo/kit/validator"
+	cvalidator "github.com/bobacgo/kit/app/validator"
 
 	"net/http"
 	"strconv"

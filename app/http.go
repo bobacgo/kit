@@ -7,6 +7,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"net/http/pprof"
 	"strings"
 	"time"
 
@@ -45,6 +46,7 @@ func RunMustHttpServer(app *App, register func(e *gin.Engine, a *Options)) {
 	}
 
 	healthApi(e, cfg) // provide health API
+	pprofApi(e)       // provide pprof API
 
 	if register != nil {
 		register(e, &app.opts) // register router
@@ -81,4 +83,20 @@ func healthApi(e *gin.Engine, cfg *conf.Basic) {
 		msg := fmt.Sprintf("%s [env=%s] %s, is active", cfg.Name, cfg.Env, cfg.Version)
 		r.Reply(c, msg)
 	})
+}
+
+// profileApi 添加性能分析路由
+func pprofApi(e *gin.Engine) {
+	// 添加 pprof 路由
+	e.GET("/debug/pprof/", gin.WrapF(pprof.Index))
+	e.GET("/debug/pprof/cmdline", gin.WrapF(pprof.Cmdline))
+	e.GET("/debug/pprof/profile", gin.WrapF(pprof.Profile))
+	e.POST("/debug/pprof/symbol", gin.WrapF(pprof.Symbol))
+	e.GET("/debug/pprof/trace", gin.WrapF(pprof.Trace))
+	e.GET("/debug/pprof/allocs", gin.WrapF(pprof.Handler("allocs").ServeHTTP))
+	e.GET("/debug/pprof/block", gin.WrapF(pprof.Handler("block").ServeHTTP))
+	e.GET("/debug/pprof/goroutine", gin.WrapF(pprof.Handler("goroutine").ServeHTTP))
+	e.GET("/debug/pprof/heap", gin.WrapF(pprof.Handler("heap").ServeHTTP))
+	e.GET("/debug/pprof/mutex", gin.WrapF(pprof.Handler("mutex").ServeHTTP))
+	e.GET("/debug/pprof/threadcreate", gin.WrapF(pprof.Handler("threadcreate").ServeHTTP))
 }

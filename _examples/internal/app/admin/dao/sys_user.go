@@ -1,9 +1,9 @@
 package dao
 
 import (
-	"github.com/gogoclouds/gogo/_examples/internal/app/admin/model"
-	"github.com/gogoclouds/gogo/g"
-	"github.com/gogoclouds/gogo/web/r"
+	"github.com/bobacgo/kit/_examples/internal/app/admin/model"
+	"github.com/bobacgo/kit/g"
+	"github.com/bobacgo/kit/web/r"
 )
 
 type sysUserDaoImpl struct{}

@@ -1,9 +1,9 @@
 package model
 
 import (
-	"github.com/gogoclouds/gogo/_examples/internal/app/common"
-	"github.com/gogoclouds/gogo/web/orm"
-	"github.com/gogoclouds/gogo/web/r"
+	"github.com/bobacgo/kit/web/orm"
+	"github.com/bobacgo/kit/web/orm/common"
+	"github.com/bobacgo/kit/web/r"
 )
 
 type SysUser struct {

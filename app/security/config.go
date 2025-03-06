@@ -10,12 +10,12 @@ type Config struct {
 }
 
 type CiphertextConfig struct {
-	IsCiphertext bool       `mapstructure:"isCiphertext" yaml:"isCiphertext"` // 密码字段是否启用密文传输
-	CipherKey    Ciphertext `mapstructure:"cipherKey" yaml:"cipherKey"`       // 支持 8 16 24 bit
+	IsCiphertext bool       `mapstructure:"isCiphertext" yaml:"isCiphertext"`   // 密码字段是否启用密文传输
+	CipherKey    Ciphertext `mapstructure:"cipherKey" yaml:"cipherKey" mask:""` // 支持 8 16 24 bit
 }
 
 type JwtConfig struct {
-	Secret              Ciphertext `mapstructure:"secret"`                                         // jwt secret
+	Secret              Ciphertext `mapstructure:"secret" mask:""`                                 // jwt secret
 	Issuer              string     `mapstructure:"issuer"`                                         // jwt issuer
 	AccessTokenExpired  string     `mapstructure:"accessTokenExpired" yaml:"accessTokenExpired"`   // jwt access token expired
 	RefreshTokenExpired string     `mapstructure:"refreshTokenExpired" yaml:"refreshTokenExpired"` // jwt refresh token expired

@@ -1,14 +1,15 @@
 package app
 
 import (
-	"log"
+	"encoding/json"
+	"github.com/bobacgo/kit/pkg/tag"
+	"gopkg.in/yaml.v2"
 	"log/slog"
 	"net/url"
 	"os"
 
 	"github.com/pkg/errors"
 
-	"github.com/fsnotify/fsnotify"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/bobacgo/kit/app/cache"
@@ -20,7 +21,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
-	"gopkg.in/yaml.v2"
 	"gorm.io/driver/mysql"
 )
 
@@ -30,7 +30,7 @@ type Options struct {
 	appid string      // 应用程序启动实例ID
 	sigs  []os.Signal // 监听的程序退出信号
 
-	conf *conf.Basic
+	conf *conf.App
 
 	wg         *errgroup.Group
 	localCache cache.Cache
@@ -51,7 +51,7 @@ func (o *Options) AppID() string {
 
 // Conf 获取公共配置(eg app info、logger config、db config 、redis config)
 func (o *Options) Conf() *conf.Basic {
-	return o.conf
+	return &o.conf.Basic
 }
 
 // LocalCache 获取本地缓存 Interface
@@ -93,19 +93,13 @@ func WithRegistrar(registrar registry.ServiceRegistrar) Option {
 	}
 }
 
-func WithMustConfig[T any](filename string, fn func(cfg *conf.ServiceConfig[T])) Option {
+func WithScanConfig[T any](c *T) Option {
 	return func(o *Options) {
-		cfg, err := conf.LoadService[T](filename, func(e fsnotify.Event) {
-			//logger.S(config.Conf.Logger.Level)
-		})
+		bytes, err := json.Marshal(o.conf.Service)
 		if err != nil {
-			log.Panic(err)
+			return
 		}
-		o.conf = &cfg.Basic
-		g.Conf = &cfg.Basic
-		cfgData, _ := yaml.Marshal(cfg)
-		slog.Info("local config info\n" + string(cfgData)) // TODO 脱密
-		fn(cfg)
+		_ = json.Unmarshal(bytes, c)
 	}
 }
 
@@ -115,9 +109,12 @@ func WithLogger() Option {
 		o.conf.Logger.Filename = o.conf.Name
 		logger.InitZapLogger(o.conf.Logger)
 
-		// yaml 格式输出到控制台
-		// cfgData, _ := yaml.Marshal(viper.AllSettings())
-		// slog.Info("local config info\n" + string(cfgData)) // TODO 脱密
+		// 提供一个脱敏标签(mask)的配置文件
+		// 扫描标签 并用 ** 替换
+		maskConf := tag.Desensitize(o.conf)
+		cfgData, _ := yaml.Marshal(maskConf)
+		slog.Info("local config info\n" + string(cfgData))
+
 		slog.Info("[config] init done.")
 		slog.Info("[logger] init done.")
 	}

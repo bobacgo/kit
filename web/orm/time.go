@@ -4,14 +4,20 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"time"
-
-	"github.com/bobacgo/kit/g"
 )
 
-const (
-	DefaultTimeFormat = "2006-01-02 15:04:05"
-	TimeLocalZone     = "Asia/Shanghai"
+var (
+	defaultTimeFormat = "2006-01-02 15:04:05"
+	timeLocalZone     = "Asia/Shanghai"
 )
+
+func SetTimeFormat(format string) {
+	defaultTimeFormat = format
+}
+
+func SetTimeLocalZone(zone string) {
+	timeLocalZone = zone
+}
 
 type LocalTime time.Time
 
@@ -37,9 +43,9 @@ func (t LocalTime) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	b := make([]byte, 0, len(t.Format())+2)
+	b := make([]byte, 0, len(defaultTimeFormat)+2)
 	b = append(b, '"')
-	b = tlt.AppendFormat(b, t.Format())
+	b = tlt.AppendFormat(b, defaultTimeFormat)
 	b = append(b, '"')
 	return b, nil
 }
@@ -48,20 +54,11 @@ func (t *LocalTime) UnmarshalJSON(data []byte) (err error) {
 	if string(data) == "null" {
 		return nil
 	}
-	now, err := time.ParseInLocation(`"`+t.Format()+`"`, string(data), time.Local)
+	now, err := time.ParseInLocation(`"`+defaultTimeFormat+`"`, string(data), time.Local)
 	*t = LocalTime(now)
 	return
 }
 
 func (t LocalTime) String() string {
-	return time.Time(t).Local().Format(t.Format())
-}
-
-// Format 从配置文件获取时间格式
-func (t LocalTime) Format() string {
-	tf := DefaultTimeFormat
-	if g.Conf != nil && g.Conf.Logger.TimeFormat != "" {
-		tf = g.Conf.Logger.TimeFormat
-	}
-	return tf
+	return time.Time(t).Local().Format(defaultTimeFormat)
 }

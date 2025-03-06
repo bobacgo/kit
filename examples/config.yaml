@@ -22,6 +22,15 @@ security:
     cacheKeyPrefix: "admin:login_token"
 localCache:
   maxSize: 500MB
+db:
+  default:
+    dryRun: false # 是否空跑 (用于调试,数据不会写入数据库)
+    source: admin:root@tcp(127.0.0.1:3306)/mall-ums?charset=utf8mb4&parseTime=True&loc=Local
+    slowThreshold: 1
+    maxLifeTime: 1
+    maxOpenConn: 100
+    maxIdleConn: 30
+
 # 业务相关
 service:
   errAttemptLimit: 5

@@ -12,13 +12,17 @@ import "github.com/bobacgo/kit/pkg/ucrypto"
 // 4.入库时hash不可逆编码(可以加盐)
 type Ciphertext string
 
-func (ct *Ciphertext) Decrypt(conf Config) error {
-	cfg := conf.Ciphertext
-	// TODO 密码强度规则校验
-	if !cfg.IsCiphertext {
-		return nil
+func (ct *Ciphertext) Encrypt(secret string) error {
+	pt, err := ucrypto.AESEncrypt(string(*ct), secret)
+	if err != nil {
+		return err
 	}
-	pt, err := ucrypto.AESDecrypt(string(*ct), string(cfg.CipherKey))
+	*ct = Ciphertext(pt)
+	return nil
+}
+
+func (ct *Ciphertext) Decrypt(secret string) error {
+	pt, err := ucrypto.AESDecrypt(string(*ct), secret)
 	if err != nil {
 		return err
 	}

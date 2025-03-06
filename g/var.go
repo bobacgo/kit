@@ -8,8 +8,7 @@ import (
 )
 
 var (
-	// Conf All 配置
-	Conf *conf.Basic
+	cfg = new(conf.Basic)
 
 	// CacheLocal
 	// 1.一级缓存 变动小、容量少。容量固定，有淘汰策略。
@@ -22,3 +21,12 @@ var (
 	// DB gorm 关系型数据库 -- 持久化
 	DB *db.DBManager
 )
+
+// Conf 获取 公共配置
+func Conf() conf.Basic {
+	return *cfg
+}
+
+func SetCfg(c conf.Basic) {
+	cfg = &c
+}

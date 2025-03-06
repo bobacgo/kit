@@ -86,12 +86,13 @@ func healthApi(e *gin.Engine, cfg *conf.Basic) {
 }
 
 // profileApi 添加性能分析路由
+// TODO 只启动gRPC服务时开启一个http服务 提供性能分析
 func pprofApi(e *gin.Engine) {
 	// 添加 pprof 路由
 	e.GET("/debug/pprof/", gin.WrapF(pprof.Index))
 	e.GET("/debug/pprof/cmdline", gin.WrapF(pprof.Cmdline))
 	e.GET("/debug/pprof/profile", gin.WrapF(pprof.Profile))
-	e.POST("/debug/pprof/symbol", gin.WrapF(pprof.Symbol))
+	e.GET("/debug/pprof/symbol", gin.WrapF(pprof.Symbol))
 	e.GET("/debug/pprof/trace", gin.WrapF(pprof.Trace))
 	e.GET("/debug/pprof/allocs", gin.WrapF(pprof.Handler("allocs").ServeHTTP))
 	e.GET("/debug/pprof/block", gin.WrapF(pprof.Handler("block").ServeHTTP))

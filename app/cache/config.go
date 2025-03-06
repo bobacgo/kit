@@ -7,7 +7,7 @@ import (
 type RedisConf struct {
 	Addrs        []string       `mapstructure:"addrs"` // [127.0.0.1:6379, 127.0.0.1:7000]
 	Username     string         `mapstructure:"username"`
-	Password     string         `mapstructure:"password"`
+	Password     string         `mapstructure:"password" mask:""`
 	DB           uint8          `mapstructure:"db"`
 	PoolSize     int            `mapstructure:"poolSize" yaml:"poolSize"`
 	ReadTimeout  types.Duration `mapstructure:"readTimeout" yaml:"readTimeout"`   // 0.2s

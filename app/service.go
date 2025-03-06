@@ -2,6 +2,9 @@ package app
 
 import (
 	"context"
+	"github.com/bobacgo/kit/app/conf"
+	"github.com/bobacgo/kit/g"
+	"github.com/fsnotify/fsnotify"
 	"log"
 	"log/slog"
 	"net"
@@ -28,12 +31,21 @@ type App struct {
 	instance *registry.ServiceInstance
 }
 
-func New(opts ...Option) *App {
+func New(configPath string, opts ...Option) *App {
+	cfg, err := conf.LoadApp(configPath, func(e fsnotify.Event) {
+		slog.Warn("config onchange", "event", e)
+	})
+	if err != nil {
+		log.Panic(err)
+	}
+	g.SetCfg(cfg.Basic)
+
 	wg, _ := errgroup.WithContext(context.Background())
 	o := Options{
 		appid: uid.UUID(),
 		sigs:  []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT},
 		wg:    wg,
+		conf:  cfg,
 	}
 	for _, opt := range opts {
 		opt(&o)
@@ -135,14 +147,15 @@ func (a *App) buildInstance() (*registry.ServiceInstance, error) {
 		}
 		endpoints = append(endpoints, e.String())
 	}
-	if !httpScheme {
+
+	if !httpScheme && opts.conf.Server.Http.Addr != "" {
 		if rUrl, err := getRegistryUrl("http", opts.conf.Server.Http.Addr); err == nil {
 			endpoints = append(endpoints, rUrl)
 		} else {
 			slog.Error("get http registry err", "err", err)
 		}
 	}
-	if !grpcScheme {
+	if !grpcScheme && opts.conf.Server.Rpc.Addr != "" {
 		if rUrl, err := getRegistryUrl("grpc", opts.conf.Server.Rpc.Addr); err == nil {
 			endpoints = append(endpoints, rUrl)
 		} else {

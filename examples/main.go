@@ -21,14 +21,12 @@ func init() {
 }
 
 func main() {
-	newApp := app.New(
-		app.WithMustConfig(*filepath, func(cfg *conf.ServiceConfig[config.Service]) {
-			config.Cfg = &cfg.Service
-		}),
+	newApp := app.New(*filepath,
+		app.WithScanConfig(config.Cfg),
 		app.WithLogger(),
 		app.WithMustLocalCache(),
-		app.WithMustDB(),
-		app.WithMustRedis(),
+		// app.WithMustDB(),
+		// app.WithMustRedis(),
 		app.WithGinServer(router.Register),
 	)
 	if err := newApp.Run(); err != nil {

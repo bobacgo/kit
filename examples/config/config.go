@@ -1,6 +1,6 @@
 package config
 
-var Cfg *Service
+var Cfg = new(Service)
 
 type Service struct {
 	ErrAttemptLimit int `yaml:"errAttemptLimit"`

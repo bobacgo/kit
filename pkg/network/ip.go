@@ -1,7 +1,7 @@
 package network
 
 import (
-	"errors"
+	"fmt"
 	"net"
 	"strings"
 )
@@ -22,43 +22,42 @@ func IsValidIP(addr string) bool {
 }
 
 func OutBoundIP() (string, error) {
+	// 获取所有网络接口
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get network interfaces: %w", err)
 	}
-	lowest := int(^uint(0) >> 1)
-	var result net.IP
+
 	for _, iface := range ifaces {
-		if (iface.Flags & net.FlagUp) == 0 {
+		// 跳过未启用的接口
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
 			continue
 		}
-		if iface.Index < lowest || result == nil {
-			lowest = iface.Index
-		}
-		if result != nil {
-			continue
-		}
+
+		// 获取接口的地址列表
 		addrs, err := iface.Addrs()
 		if err != nil {
-			continue
+			continue // 如果获取地址失败，跳过该接口
 		}
-		for _, rawAddr := range addrs {
+
+		for _, addr := range addrs {
+			// 检查是否为 IPv4 地址
 			var ip net.IP
-			switch addr := rawAddr.(type) {
-			case *net.IPAddr:
-				ip = addr.IP
+			switch v := addr.(type) {
 			case *net.IPNet:
-				ip = addr.IP
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
 			default:
 				continue
 			}
-			if IsValidIP(ip.String()) {
-				result = ip
+
+			// 确保是有效的 IPv4 地址
+			if ip.To4() != nil && !ip.IsLoopback() {
+				return ip.String(), nil
 			}
 		}
 	}
-	if result == nil {
-		return "", errors.New("no valid ip found")
-	}
-	return result.String(), nil
+
+	return "", fmt.Errorf("no valid IPv4 address found")
 }

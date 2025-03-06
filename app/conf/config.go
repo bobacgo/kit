@@ -9,9 +9,9 @@ import (
 	"github.com/bobacgo/kit/enum"
 )
 
-type ServiceConfig[T any] struct {
+type App struct {
 	Basic   `mapstructure:",squash"`
-	Service T `mapstructure:"service"` // 应用自己的其他配置
+	Service map[string]any `mapstructure:"service"` // 应用自己的其他配置
 }
 
 // Basic 服务必要的配置文件

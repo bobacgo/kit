@@ -9,20 +9,13 @@ import (
 	"github.com/spf13/viper"
 )
 
-// LoadService 加载配置文件
+// LoadApp 加载配置文件
 // 优先级: (相同key)
 //
 //	1.主配置文件优先级最高
 //	2.configs 数组索引越小优先级越高
-func LoadService[T any](filepath string, onChange func(e fsnotify.Event)) (*ServiceConfig[T], error) {
-
-	// vpr := viper.GetViper()
-	// if filepath != "" {
-	// 	vpr.SetConfigFile(filepath)
-	// } else {
-	// 	vpr.AddConfigPath(".") // "./config.yaml"
-	// }
-	cfg := new(ServiceConfig[T])
+func LoadApp(filepath string, onChange func(e fsnotify.Event)) (*App, error) {
+	cfg := new(App)
 	if err := Load(filepath, cfg, onChange); err != nil {
 		return nil, err
 	}

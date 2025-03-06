@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"github.com/bobacgo/kit/app/conf"
-	"github.com/bobacgo/kit/g"
 	"github.com/fsnotify/fsnotify"
 	"log"
 	"log/slog"
@@ -38,8 +37,6 @@ func New(configPath string, opts ...Option) *App {
 	if err != nil {
 		log.Panic(err)
 	}
-	g.SetCfg(cfg.Basic)
-
 	wg, _ := errgroup.WithContext(context.Background())
 	o := Options{
 		appid: uid.UUID(),

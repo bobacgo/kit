@@ -17,7 +17,6 @@ import (
 	"github.com/bobacgo/kit/app/db"
 	"github.com/bobacgo/kit/app/logger"
 	"github.com/bobacgo/kit/app/registry"
-	"github.com/bobacgo/kit/g"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
@@ -55,16 +54,21 @@ func (o *Options) Conf() *conf.Basic {
 }
 
 // LocalCache 获取本地缓存 Interface
+// CacheLocal
+// 1.一级缓存 变动小、容量少。容量固定，有淘汰策略。
+// 2.不适合分布式数据共享。
 func (o Options) LocalCache() cache.Cache {
 	return o.localCache
 }
 
 // DB 获取数据库连接
+// DB gorm 关系型数据库 -- 持久化
 func (o Options) DB() *db.DBManager {
 	return o.db
 }
 
 // Redis 获取redis client
+// CacheDB 二级缓存 容量大，有网络IO延迟
 func (o Options) Redis() redis.UniversalClient {
 	return o.redis
 }
@@ -128,7 +132,6 @@ func WithMustLocalCache() Option {
 			if err != nil {
 				return errors.Wrap(err, "init local cache failed")
 			}
-			g.CacheLocal = o.localCache
 			slog.Info("[local_cache] init done.")
 			return nil
 		})
@@ -143,7 +146,6 @@ func WithMustRedis() Option {
 			if err != nil {
 				return errors.Wrap(err, "init redis failed")
 			}
-			g.CacheDB = o.redis
 			slog.Info("[redis] init done.")
 			return nil
 		})
@@ -165,7 +167,6 @@ func WithMustDB() Option {
 			if err != nil {
 				return errors.Wrap(err, "init db manager failed")
 			}
-			g.DB = o.db
 			slog.Info("[database] init done.")
 			return nil
 		})

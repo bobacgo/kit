@@ -3,10 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/bobacgo/kit/app/conf"
-	"github.com/bobacgo/kit/app/server"
-	"github.com/fsnotify/fsnotify"
-	"golang.org/x/exp/maps"
 	"log"
 	"log/slog"
 	"net"
@@ -16,6 +12,11 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/bobacgo/kit/app/conf"
+	"github.com/bobacgo/kit/app/server"
+	"github.com/fsnotify/fsnotify"
+	"golang.org/x/exp/maps"
 
 	"github.com/bobacgo/kit/app/registry"
 	"github.com/bobacgo/kit/pkg/network"
@@ -72,6 +73,14 @@ func New(configPath string, opts ...Option) *App {
 // 1.注册服务
 // 2.退出相关组件或服务
 func (a *App) Run() error {
+	opts := a.opts
+
+	if opts.beforeStart == nil {
+		opts.beforeStart = func(ctx context.Context) error {
+			return nil
+		}
+	}
+
 	instance, err := a.buildInstance()
 	if err != nil {
 		return err
@@ -79,8 +88,6 @@ func (a *App) Run() error {
 	a.mu.Lock()
 	a.instance = instance
 	a.mu.Unlock()
-
-	opts := a.opts
 
 	if opts.httpServer != nil {
 		go RunMustHttpServer(a, opts.httpServer)
@@ -92,11 +99,11 @@ func (a *App) Run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	for k, srv := range opts.servers {
-		go func(srv server.Server) {
+		go func(k string, srv server.Server) {
 			if err := srv.Start(ctx); err != nil {
 				log.Panicln(k, err)
 			}
-		}(srv)
+		}(k, srv)
 	}
 
 	// 注册服务 TODO 等待服务启动成功
@@ -113,6 +120,13 @@ func (a *App) Run() error {
 	}
 
 	slog.Info("server started")
+
+	if opts.afterStart != nil {
+		if err := opts.afterStart(context.Background(), &opts); err != nil {
+			return err
+		}
+	}
+
 	// 阻塞并监听退出信号
 	signal.Notify(a.signal, opts.sigs...)
 	<-a.signal
@@ -132,6 +146,12 @@ func (a *App) Stop() {
 // 2.退出 http、grpc服务
 func (a *App) shutdown(ctx context.Context) error {
 	opts := a.opts
+
+	if opts.beforeStop != nil {
+		if err := opts.beforeStop(ctx, &opts); err != nil {
+			return err
+		}
+	}
 
 	a.mu.Lock()
 	instance := a.instance
@@ -163,6 +183,12 @@ func (a *App) shutdown(ctx context.Context) error {
 	// 1.等待 Http 服务结束退出
 	// 2.等待 RPC 服务结束退出
 	a.wg.Wait()
+
+	if opts.afterStop != nil {
+		if err := opts.afterStop(ctx, &opts); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

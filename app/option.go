@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/bobacgo/kit/app/server"
 	"github.com/bobacgo/kit/pkg/tag"
@@ -48,11 +49,16 @@ type Options struct {
 	localCache cache.Cache
 	redis      redis.UniversalClient
 	db         *db.DBManager
-	// 插件功能 如 服务需要依赖 MongoDB、Elasticsearch等
-	servers map[string]server.Server
+
+	// hook func
+	beforeStart                       func(ctx context.Context) error
+	afterStart, beforeStop, afterStop func(ctx context.Context, opts *Options) error
 
 	endpoints []*url.URL
 	registrar registry.ServiceRegistrar
+
+	// 插件功能 如 服务需要依赖 MongoDB、Elasticsearch等
+	servers map[string]server.Server
 
 	httpServer func(e *gin.Engine, a *Options)  // 基于 gin 的 http 服务
 	rpcServer  func(s *grpc.Server, a *Options) // 基于 grpc 的 rpc 服务
@@ -68,8 +74,7 @@ func (o *Options) Conf() *conf.Basic {
 	return &o.conf.Basic
 }
 
-// LocalCache 获取本地缓存 Interface
-// CacheLocal
+// LocalCache 获取本地缓存
 // 1.一级缓存 变动小、容量少。容量固定，有淘汰策略。
 // 2.不适合分布式数据共享。
 func (o *Options) LocalCache() cache.Cache {
@@ -224,5 +229,29 @@ func WithServer(name string, srv func(a *Options) server.Server) Option {
 	components[name] = struct{}{}
 	return func(o *Options) {
 		o.servers[name] = srv(o)
+	}
+}
+
+func WithBeforeStart(fn func(ctx context.Context) error) Option {
+	return func(o *Options) {
+		o.beforeStart = fn
+	}
+}
+
+func WithAfterStart(fn func(ctx context.Context, opts *Options) error) Option {
+	return func(o *Options) {
+		o.afterStart = fn
+	}
+}
+
+func WithBeforeStop(fn func(ctx context.Context, opts *Options) error) Option {
+	return func(o *Options) {
+		o.beforeStop = fn
+	}
+}
+
+func WithAfterStop(fn func(ctx context.Context, opts *Options) error) Option {
+	return func(o *Options) {
+		o.afterStop = fn
 	}
 }

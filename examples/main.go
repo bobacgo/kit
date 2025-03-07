@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	kserver "github.com/bobacgo/kit/app/server"
 	"github.com/bobacgo/kit/examples/internal/server"
 	"log"
+	"log/slog"
 
 	"github.com/bobacgo/kit/app"
 	"github.com/bobacgo/kit/app/conf"
@@ -32,6 +34,10 @@ func main() {
 		app.WithGinServer(router.Register),
 		app.WithServer(server.KafkaServerName, func(a *app.Options) kserver.Server {
 			return new(server.KafkaServer)
+		}),
+		app.WithAfterStart(func(ctx context.Context, opts *app.Options) error {
+			slog.Info("after start")
+			return nil
 		}),
 	)
 	if err := newApp.Run(); err != nil {

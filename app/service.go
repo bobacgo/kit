@@ -2,8 +2,11 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"github.com/bobacgo/kit/app/conf"
+	"github.com/bobacgo/kit/app/server"
 	"github.com/fsnotify/fsnotify"
+	"golang.org/x/exp/maps"
 	"log"
 	"log/slog"
 	"net"
@@ -12,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/bobacgo/kit/app/registry"
 	"github.com/bobacgo/kit/pkg/network"
@@ -39,17 +43,24 @@ func New(configPath string, opts ...Option) *App {
 	}
 	wg, _ := errgroup.WithContext(context.Background())
 	o := Options{
-		appid: uid.UUID(),
-		sigs:  []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT},
-		wg:    wg,
-		conf:  cfg,
+		appId:   uid.UUID(),
+		sigs:    []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT},
+		wgInit:  wg,
+		conf:    cfg,
+		servers: make(map[string]server.Server),
 	}
 	for _, opt := range opts {
 		opt(&o)
 	}
-	if err := o.wg.Wait(); err != nil { // 等待 options 实例化结束
+	if err := o.wgInit.Wait(); err != nil { // 等待 options 实例化结束
 		log.Panic(err)
 	}
+	slog.Info("app info",
+		slog.String("appId", o.AppID()),
+		slog.String("appName", o.Conf().Name),
+		slog.String("appVersion", o.Conf().Version),
+	)
+	slog.Info(fmt.Sprintf("use components list %q\n", maps.Keys(components)))
 	return &App{
 		opts:   o,
 		exit:   make(chan struct{}),
@@ -70,6 +81,7 @@ func (a *App) Run() error {
 	a.mu.Unlock()
 
 	opts := a.opts
+
 	if opts.httpServer != nil {
 		go RunMustHttpServer(a, opts.httpServer)
 	}
@@ -77,12 +89,23 @@ func (a *App) Run() error {
 		go RunMustRpcServer(a, opts.rpcServer)
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	for k, srv := range opts.servers {
+		go func(srv server.Server) {
+			if err := srv.Start(ctx); err != nil {
+				log.Panicln(k, err)
+			}
+		}(srv)
+	}
 
 	// 注册服务 TODO 等待服务启动成功
 	if opts.registrar != nil {
-		ctx, cancel := context.WithTimeout(ctx, opts.conf.Registry.Timeout.ToTimeDuration())
-		defer cancel()
+		timeout := opts.conf.Registry.Timeout
+		if timeout != "" {
+			ctx, cancel = context.WithTimeout(ctx, timeout.ToTimeDuration())
+			defer cancel()
+		}
 		if err := opts.registrar.Registry(ctx, instance); err != nil {
 			slog.Error("register service error", "err", err)
 			return err
@@ -113,12 +136,25 @@ func (a *App) shutdown(ctx context.Context) error {
 	a.mu.Lock()
 	instance := a.instance
 	a.mu.Unlock()
+
 	if opts.registrar != nil && instance != nil {
-		ctx, cancel := context.WithTimeout(ctx, opts.conf.Registry.Timeout.ToTimeDuration())
+		duration := opts.conf.Registry.Timeout
+		if duration == "" {
+			duration = "5s"
+		}
+		ctx, cancel := context.WithTimeout(ctx, duration.ToTimeDuration())
 		defer cancel()
 		if err := opts.registrar.Deregister(ctx, instance); err != nil {
 			slog.Error("deregister service error", "err", err)
 			return err
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	for k, srv := range opts.servers {
+		if err := srv.Stop(ctx); err != nil {
+			slog.Error("stop service error", k, err)
 		}
 	}
 
@@ -160,7 +196,7 @@ func (a *App) buildInstance() (*registry.ServiceInstance, error) {
 		}
 	}
 	return &registry.ServiceInstance{
-		ID:        opts.appid,
+		ID:        opts.appId,
 		Name:      opts.conf.Name,
 		Version:   opts.conf.Version,
 		Metadata:  nil,

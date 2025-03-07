@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"github.com/bobacgo/kit/app/server"
 	"github.com/bobacgo/kit/pkg/tag"
 	"gopkg.in/yaml.v2"
 	"log/slog"
@@ -23,29 +24,43 @@ import (
 	"gorm.io/driver/mysql"
 )
 
+const (
+	compLogger = "logger"
+	compCache  = "local_cache"
+	compRedis  = "redis"
+	compDB     = "db"
+	compHttp   = "http"
+	compRpc    = "rpc"
+)
+
+var components = make(map[string]struct{}) // 组件名列表
+
 type Option func(o *Options)
 
 type Options struct {
-	appid string      // 应用程序启动实例ID
+	appId string      // 应用程序启动实例ID
 	sigs  []os.Signal // 监听的程序退出信号
 
 	conf *conf.App
 
-	wg         *errgroup.Group
+	wgInit *errgroup.Group // 用于并发初始化组件
+	// 内置功能
 	localCache cache.Cache
 	redis      redis.UniversalClient
 	db         *db.DBManager
+	// 插件功能 如 服务需要依赖 MongoDB、Elasticsearch等
+	servers map[string]server.Server
 
 	endpoints []*url.URL
 	registrar registry.ServiceRegistrar
 
-	httpServer func(e *gin.Engine, a *Options)
-	rpcServer  func(s *grpc.Server, a *Options)
+	httpServer func(e *gin.Engine, a *Options)  // 基于 gin 的 http 服务
+	rpcServer  func(s *grpc.Server, a *Options) // 基于 grpc 的 rpc 服务
 }
 
 // AppID 获取应用程序启动实例ID
 func (o *Options) AppID() string {
-	return o.appid
+	return o.appId
 }
 
 // Conf 获取公共配置(eg app info、logger config、db config 、redis config)
@@ -57,25 +72,34 @@ func (o *Options) Conf() *conf.Basic {
 // CacheLocal
 // 1.一级缓存 变动小、容量少。容量固定，有淘汰策略。
 // 2.不适合分布式数据共享。
-func (o Options) LocalCache() cache.Cache {
+func (o *Options) LocalCache() cache.Cache {
 	return o.localCache
 }
 
 // DB 获取数据库连接
 // DB gorm 关系型数据库 -- 持久化
-func (o Options) DB() *db.DBManager {
+func (o *Options) DB() *db.DBManager {
 	return o.db
 }
 
 // Redis 获取redis client
 // CacheDB 二级缓存 容量大，有网络IO延迟
-func (o Options) Redis() redis.UniversalClient {
+func (o *Options) Redis() redis.UniversalClient {
 	return o.redis
+}
+
+// Server 获取自己注入的组件服务
+func (o *Options) Server(name string) (any, bool) {
+	srv, ok := o.servers[name]
+	if !ok {
+		return nil, false
+	}
+	return srv.Get(name), true
 }
 
 func WithAppID(id string) Option {
 	return func(o *Options) {
-		o.appid = id
+		o.appId = id
 	}
 }
 
@@ -99,15 +123,15 @@ func WithRegistrar(registrar registry.ServiceRegistrar) Option {
 
 func WithScanConfig[T any](c *T) Option {
 	return func(o *Options) {
-		bytes, err := json.Marshal(o.conf.Service)
-		if err != nil {
-			return
+		bytes, _ := json.Marshal(o.conf.Service)
+		if err := json.Unmarshal(bytes, c); err != nil {
+			slog.Error("scan config", "err", err)
 		}
-		_ = json.Unmarshal(bytes, c)
 	}
 }
 
 func WithLogger() Option {
+	components[compLogger] = struct{}{}
 	return func(o *Options) {
 		o.conf.Logger = logger.NewConfig()
 		o.conf.Logger.Filename = o.conf.Name
@@ -124,13 +148,20 @@ func WithLogger() Option {
 	}
 }
 
-func WithMustLocalCache() Option {
+// WithLocalCache 本地缓存
+// 如果没有配置 LocalCache.MaxSize 则使用默认值 512MB
+func WithLocalCache() Option {
+	components[compCache] = struct{}{}
 	return func(o *Options) {
-		o.wg.Go(func() error {
-			var err error
-			o.localCache, err = cache.DefaultCache()
-			if err != nil {
-				return errors.Wrap(err, "init local cache failed")
+		o.wgInit.Go(func() error {
+			maxSize := o.conf.LocalCache.MaxSize
+			if maxSize == "" {
+				o.localCache = cache.DefaultCache()
+			} else {
+				var err error
+				if o.localCache, err = cache.NewFreeCache(maxSize); err != nil {
+					return errors.Wrap(err, "init local cache failed")
+				}
 			}
 			slog.Info("[local_cache] init done.")
 			return nil
@@ -139,8 +170,9 @@ func WithMustLocalCache() Option {
 }
 
 func WithMustRedis() Option {
+	components[compRedis] = struct{}{}
 	return func(o *Options) {
-		o.wg.Go(func() error {
+		o.wgInit.Go(func() error {
 			var err error
 			o.redis, err = cache.NewRedis(o.conf.Redis)
 			if err != nil {
@@ -153,8 +185,9 @@ func WithMustRedis() Option {
 }
 
 func WithMustDB() Option {
+	components[compDB] = struct{}{}
 	return func(o *Options) {
-		o.wg.Go(func() error {
+		o.wgInit.Go(func() error {
 			smMap := make(map[string]db.InstanceConfig, len(o.conf.DB))
 			for k, c := range o.conf.DB {
 				smMap[k] = db.InstanceConfig{
@@ -173,14 +206,23 @@ func WithMustDB() Option {
 	}
 }
 
-func WithGinServer(router func(e *gin.Engine, a *Options)) Option {
+func WithGinServer(svr func(e *gin.Engine, a *Options)) Option {
+	components[compHttp] = struct{}{}
 	return func(o *Options) {
-		o.httpServer = router
+		o.httpServer = svr
 	}
 }
 
 func WithGrpcServer(svr func(s *grpc.Server, a *Options)) Option {
+	components[compRpc] = struct{}{}
 	return func(o *Options) {
 		o.rpcServer = svr
+	}
+}
+
+func WithServer(name string, srv func(a *Options) server.Server) Option {
+	components[name] = struct{}{}
+	return func(o *Options) {
+		o.servers[name] = srv(o)
 	}
 }

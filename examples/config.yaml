@@ -34,6 +34,9 @@ db:
 # 业务相关
 service:
   errAttemptLimit: 5
+  kafka:
+    addr: '127.0.0.1:9092'
+    timeout: 1s
 
 # ====================================
 # registry

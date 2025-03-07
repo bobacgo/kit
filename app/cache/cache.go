@@ -27,6 +27,7 @@ type Cache interface {
 
 var defaultSize types.ByteSize = "512M"
 
-func DefaultCache() (Cache, error) {
-	return NewFreeCache(defaultSize)
+func DefaultCache() Cache {
+	cache, _ := NewFreeCache(defaultSize)
+	return cache
 }

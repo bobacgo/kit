@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	kserver "github.com/bobacgo/kit/app/server"
+	"github.com/bobacgo/kit/examples/internal/server"
 	"log"
 
 	"github.com/bobacgo/kit/app"
@@ -24,10 +26,13 @@ func main() {
 	newApp := app.New(*filepath,
 		app.WithScanConfig(config.Cfg),
 		app.WithLogger(),
-		app.WithMustLocalCache(),
+		app.WithLocalCache(),
 		// app.WithMustDB(),
 		// app.WithMustRedis(),
 		app.WithGinServer(router.Register),
+		app.WithServer(server.KafkaServerName, func(a *app.Options) kserver.Server {
+			return new(server.KafkaServer)
+		}),
 	)
 	if err := newApp.Run(); err != nil {
 		log.Panic(err.Error())

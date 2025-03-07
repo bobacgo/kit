@@ -9,31 +9,28 @@ import (
 )
 
 func TestCache(t *testing.T) {
-	che, err := cache.DefaultCache()
+	che := cache.DefaultCache()
 
-	if err != nil {
+	if err := che.Set("foo", "bar", 3*time.Second); err != nil {
 		t.Error(err)
 	}
-	if err = che.Set("foo", "bar", 3*time.Second); err != nil {
-		t.Error(err)
-	}
-	if err = che.Set("foo1", "bar1", time.Second); err != nil {
+	if err := che.Set("foo1", "bar1", time.Second); err != nil {
 		t.Error(err)
 	}
 	t.Log(che.Keys())
 
 	var value string
-	err = che.Get("foo1", &value)
+	_ = che.Get("foo1", &value)
 	t.Log(value)
 
 	var value1 string
 	che.Del("foo")
-	err = che.Get("foo", &value1)
+	_ = che.Get("foo", &value1)
 	t.Log(value1)
 
 	var value2 string
 	time.Sleep(2 * time.Second)
-	err = che.Get("foo1", &value2)
+	_ = che.Get("foo1", &value2)
 	t.Log(value2)
 
 	che.Clear()
@@ -49,7 +46,7 @@ func TestCache(t *testing.T) {
 		t.Error(err)
 	}
 	var hv map[string]any
-	err = che.Get("hash", &hv)
+	_ = che.Get("hash", &hv)
 	t.Log(hv)
 }
 

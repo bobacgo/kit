@@ -52,7 +52,6 @@ func main() {
 	newApp := app.New(*filepath,
 		app.WithScanConfig(config.Cfg),
 		app.WithLogger(),
-		app.WithMustLocalCache(),
 		// app.WithMustDB(),
 		// app.WithMustRedis(),
 		app.WithGinServer(router.Register),

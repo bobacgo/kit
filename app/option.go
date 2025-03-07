@@ -3,12 +3,14 @@ package app
 import (
 	"context"
 	"encoding/json"
-	"github.com/bobacgo/kit/app/server"
-	"github.com/bobacgo/kit/pkg/tag"
-	"gopkg.in/yaml.v2"
+	"fmt"
 	"log/slog"
 	"net/url"
 	"os"
+
+	"github.com/bobacgo/kit/app/server"
+	"github.com/bobacgo/kit/pkg/tag"
+	"gopkg.in/yaml.v2"
 
 	"github.com/pkg/errors"
 
@@ -33,6 +35,8 @@ const (
 	compHttp   = "http"
 	compRpc    = "rpc"
 )
+
+const initDoneFmt = " [%s] init done."
 
 var components = make(map[string]struct{}) // 组件名列表
 
@@ -148,29 +152,8 @@ func WithLogger() Option {
 		cfgData, _ := yaml.Marshal(maskConf)
 		slog.Info("local config info\n" + string(cfgData))
 
-		slog.Info("[config] init done.")
-		slog.Info("[logger] init done.")
-	}
-}
-
-// WithLocalCache 本地缓存
-// 如果没有配置 LocalCache.MaxSize 则使用默认值 512MB
-func WithLocalCache() Option {
-	components[compCache] = struct{}{}
-	return func(o *Options) {
-		o.wgInit.Go(func() error {
-			maxSize := o.conf.LocalCache.MaxSize
-			if maxSize == "" {
-				o.localCache = cache.DefaultCache()
-			} else {
-				var err error
-				if o.localCache, err = cache.NewFreeCache(maxSize); err != nil {
-					return errors.Wrap(err, "init local cache failed")
-				}
-			}
-			slog.Info("[local_cache] init done.")
-			return nil
-		})
+		slog.Info(fmt.Sprintf(initDoneFmt, "config"))
+		slog.Info(fmt.Sprintf(initDoneFmt, compLogger))
 	}
 }
 
@@ -183,7 +166,7 @@ func WithMustRedis() Option {
 			if err != nil {
 				return errors.Wrap(err, "init redis failed")
 			}
-			slog.Info("[redis] init done.")
+			slog.Info(fmt.Sprintf(initDoneFmt, compRedis))
 			return nil
 		})
 	}
@@ -205,7 +188,7 @@ func WithMustDB() Option {
 			if err != nil {
 				return errors.Wrap(err, "init db manager failed")
 			}
-			slog.Info("[database] init done.")
+			slog.Info(fmt.Sprintf(initDoneFmt, compDB))
 			return nil
 		})
 	}

@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"flag"
-	kserver "github.com/bobacgo/kit/app/server"
-	"github.com/bobacgo/kit/examples/internal/server"
 	"log"
 	"log/slog"
+
+	kserver "github.com/bobacgo/kit/app/server"
+	"github.com/bobacgo/kit/examples/internal/server"
 
 	"github.com/bobacgo/kit/app"
 	"github.com/bobacgo/kit/app/conf"
@@ -28,7 +29,6 @@ func main() {
 	newApp := app.New(*filepath,
 		app.WithScanConfig(config.Cfg),
 		app.WithLogger(),
-		app.WithLocalCache(),
 		// app.WithMustDB(),
 		// app.WithMustRedis(),
 		app.WithGinServer(router.Register),

@@ -13,9 +13,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bobacgo/kit/app/cache"
 	"github.com/bobacgo/kit/app/conf"
 	"github.com/bobacgo/kit/app/server"
+	"github.com/bobacgo/kit/app/types"
 	"github.com/fsnotify/fsnotify"
+	"github.com/pkg/errors"
 	"golang.org/x/exp/maps"
 
 	"github.com/bobacgo/kit/app/registry"
@@ -42,6 +45,7 @@ func New(configPath string, opts ...Option) *App {
 	if err != nil {
 		log.Panic(err)
 	}
+
 	wg, _ := errgroup.WithContext(context.Background())
 	o := Options{
 		appId:   uid.UUID(),
@@ -50,17 +54,21 @@ func New(configPath string, opts ...Option) *App {
 		conf:    cfg,
 		servers: make(map[string]server.Server),
 	}
+	wg.Go(func() error {
+		localCache, err := newLocalCache(cfg.LocalCache.MaxSize)
+		if err != nil {
+			return err
+		}
+		o.localCache = localCache
+		return nil
+	})
 	for _, opt := range opts {
 		opt(&o)
 	}
 	if err := o.wgInit.Wait(); err != nil { // 等待 options 实例化结束
 		log.Panic(err)
 	}
-	slog.Info("app info",
-		slog.String("appId", o.AppID()),
-		slog.String("appName", o.Conf().Name),
-		slog.String("appVersion", o.Conf().Version),
-	)
+	slog.Info("app info", "ID", o.AppID(), "name", o.Conf().Name, "version", o.Conf().Version)
 	slog.Info(fmt.Sprintf("use components list %q\n", maps.Keys(components)))
 	return &App{
 		opts:   o,
@@ -103,6 +111,7 @@ func (a *App) Run() error {
 			if err := srv.Start(ctx); err != nil {
 				log.Panicln(k, err)
 			}
+			slog.Info(fmt.Sprintf(initDoneFmt, k))
 		}(k, srv)
 	}
 
@@ -228,6 +237,20 @@ func (a *App) buildInstance() (*registry.ServiceInstance, error) {
 		Metadata:  nil,
 		Endpoints: endpoints,
 	}, nil
+}
+
+func newLocalCache(limit types.ByteSize) (cache.Cache, error) {
+	if limit == "" {
+		return cache.DefaultCache(), nil // 没有指定大小就使用默认的 512MB
+	}
+	localCache, err := cache.NewFreeCache(limit)
+	if err != nil {
+		return nil, errors.Wrap(err, "init local cache failed")
+	}
+	slog.Info(fmt.Sprintf(initDoneFmt, compCache))
+
+	components[compCache] = struct{}{}
+	return localCache, nil
 }
 
 func getRegistryUrl(scheme, addr string) (string, error) {

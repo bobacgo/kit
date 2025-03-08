@@ -9,6 +9,20 @@ import (
 	"github.com/bobacgo/kit/enum"
 )
 
+// App 应用配置设计
+/*
+	1.支持热加载
+	2.多种文件类型
+	3.配置值格式校验
+	4.配置值默认值
+	5.配置特殊类型解析
+	6.支持配置值脱敏输出
+	7.支持多配置文件
+	优先级: (相同key)
+
+		1.主配置文件优先级最高
+		2.configs 数组索引越小优先级越高
+*/
 type App struct {
 	Basic   `mapstructure:",squash"`
 	Service map[string]any `mapstructure:"service"` // 应用自己的其他配置

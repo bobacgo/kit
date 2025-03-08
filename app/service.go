@@ -40,7 +40,7 @@ type App struct {
 
 func New(configPath string, opts ...Option) *App {
 	cfg, err := conf.LoadApp(configPath, func(e fsnotify.Event) {
-		slog.Warn("config onchange", "event", e)
+		slog.Warn("config onchange", "name", e.Name, "op", e.Op)
 	})
 	if err != nil {
 		log.Panic(err)
@@ -55,12 +55,8 @@ func New(configPath string, opts ...Option) *App {
 		servers: make(map[string]server.Server),
 	}
 	wg.Go(func() error {
-		localCache, err := newLocalCache(cfg.LocalCache.MaxSize)
-		if err != nil {
-			return err
-		}
-		o.localCache = localCache
-		return nil
+		o.localCache, err = newLocalCache(cfg.LocalCache.MaxSize)
+		return err
 	})
 	for _, opt := range opts {
 		opt(&o)

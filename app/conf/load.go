@@ -3,42 +3,107 @@ package conf
 import (
 	"flag"
 	"log/slog"
+	"sync/atomic"
 
+	"github.com/bobacgo/kit/app/validator"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 // LoadApp 加载配置文件
+// 配置文件有变化时,会自动全部重新加载配置文件
 // 优先级: (相同key)
 //
 //	1.主配置文件优先级最高
 //	2.configs 数组索引越小优先级越高
 func LoadApp(filepath string, onChange func(e fsnotify.Event)) (*App, error) {
+	var cfgValue atomic.Value
 	cfg := new(App)
-	if err := Load(filepath, cfg, onChange); err != nil {
+	cfgValue.Store(cfg)
+
+	// 创建一个新的onChange处理函数,用于处理配置文件的变更
+	createOnChange := func(configPath string) func(e fsnotify.Event) {
+		return func(e fsnotify.Event) {
+			// 配置文件变更时,需要重新加载所有配置
+			newCfg := new(App)
+
+			// 先加载主配置文件
+			if err := Load(filepath, newCfg, nil); err != nil {
+				slog.Error("reload main config failed", "error", err)
+				return
+			}
+
+			// 加载其他配置文件
+			// configs 数组索引越小优先级越高
+			for i := len(newCfg.Configs) - 1; i >= 0; i-- {
+				if err := Load(newCfg.Configs[i], newCfg, nil); err != nil {
+					slog.Error("reload sub config failed", "error", err, "config", newCfg.Configs[i])
+					return
+				}
+			}
+
+			// 主配置文件优先级最高,最后加载以覆盖其他配置
+			if len(newCfg.Configs) > 0 {
+				if err := Load(filepath, newCfg, nil); err != nil {
+					slog.Error("reload main config again failed", "error", err)
+					return
+				}
+			}
+
+			if err := validator.Struct(newCfg); err != nil {
+				slog.Error("reload config failed", "error", err)
+				return
+			}
+
+			cfgValue.Store(newCfg)
+			onChange(e)
+		}
+	}
+
+	// 加载主配置文件
+	if err := Load(filepath, cfg, createOnChange(filepath)); err != nil {
 		return nil, err
 	}
+
 	// 加载其他配置文件
 	// configs 数组索引越小优先级越高
 	for i := len(cfg.Configs) - 1; i >= 0; i-- {
-		if err := Load(cfg.Configs[i], cfg, onChange); err != nil {
+		configPath := cfg.Configs[i] // 捕获循环变量
+		if err := Load(configPath, cfg, createOnChange(configPath)); err != nil {
 			return nil, err
 		}
 	}
+
+	// 主配置文件优先级最高,最后加载以覆盖其他配置
 	if len(cfg.Configs) > 0 {
-		if err := Load(filepath, cfg, onChange); err != nil { // 主配置文件优先级最高, 覆盖其他配置文件
+		if err := Load(filepath, cfg, createOnChange(filepath)); err != nil {
 			return nil, err
 		}
 	}
-	return cfg, nil
+
+	if err := validator.Struct(cfg); err != nil {
+		return nil, err
+	}
+	return cfgValue.Load().(*App), nil
 }
 
 // LoadDefault ./config.yaml
 func LoadDefault[T any](onChange func(e fsnotify.Event)) (*T, error) {
+	cfgValue := &atomic.Value{}
 	cfg := new(T)
-	err := Load(".", cfg, onChange)
-	return cfg, err
+	cfgValue.Store(cfg)
+
+	err := Load(".", cfg, func(e fsnotify.Event) {
+		newCfg := new(T)
+		if err := Load(".", newCfg, onChange); err != nil {
+			slog.Error("reload config failed", "error", err)
+			return
+		}
+		cfgValue.Store(newCfg)
+		onChange(e)
+	})
+	return cfgValue.Load().(*T), err
 }
 
 func Load[T any](filepath string, cfg *T, onChange func(e fsnotify.Event)) error {
@@ -51,25 +116,12 @@ func Load[T any](filepath string, cfg *T, onChange func(e fsnotify.Event)) error
 	if err := vpr.Unmarshal(cfg); err != nil {
 		return err
 	}
-	// if err := validator.Struct(cfg); err != nil {
-	// 	return err
-	// }
-	vpr.WatchConfig()
-	vpr.OnConfigChange(func(e fsnotify.Event) {
-		newCfg := new(T)
-		if err := vpr.Unmarshal(newCfg); err != nil {
-			slog.Error(err.Error())
-			return
-		}
-		// if err := validator.Struct(newCfg); err != nil {
-		// 	slog.Error(err.Error())
-		// 	return
-		// }
-		// TODO merge 判断优先级
-
-		slog.Info("Config file changed: " + e.String())
-		onChange(e)
-	})
+	if onChange != nil {
+		vpr.WatchConfig()
+		vpr.OnConfigChange(func(e fsnotify.Event) {
+			onChange(e)
+		})
+	}
 	return nil
 }
 

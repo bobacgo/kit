@@ -2,16 +2,12 @@ package app
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/url"
 	"os"
 
 	"github.com/bobacgo/kit/app/server"
-	"github.com/bobacgo/kit/pkg/tag"
-	"gopkg.in/yaml.v2"
-
 	"github.com/pkg/errors"
 
 	"golang.org/x/sync/errgroup"
@@ -19,7 +15,6 @@ import (
 	"github.com/bobacgo/kit/app/cache"
 	"github.com/bobacgo/kit/app/conf"
 	"github.com/bobacgo/kit/app/db"
-	"github.com/bobacgo/kit/app/logger"
 	"github.com/bobacgo/kit/app/registry"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -28,12 +23,11 @@ import (
 )
 
 const (
-	compLogger = "logger"
-	compCache  = "local_cache"
-	compRedis  = "redis"
-	compDB     = "db"
-	compHttp   = "http"
-	compRpc    = "rpc"
+	compCache = "local_cache"
+	compRedis = "redis"
+	compDB    = "db"
+	compHttp  = "http"
+	compRpc   = "rpc"
 )
 
 const initDoneFmt = " [%s] init done."
@@ -46,7 +40,7 @@ type Options struct {
 	appId string      // 应用程序启动实例ID
 	sigs  []os.Signal // 监听的程序退出信号
 
-	conf *conf.App
+	conf conf.Basic
 
 	wgInit *errgroup.Group // 用于并发初始化组件
 	// 内置功能
@@ -75,7 +69,8 @@ func (o *Options) AppID() string {
 
 // Conf 获取公共配置(eg app info、logger config、db config 、redis config)
 func (o *Options) Conf() *conf.Basic {
-	return &o.conf.Basic
+	basicConf := conf.GetBasicConf()
+	return &basicConf
 }
 
 // LocalCache 获取本地缓存
@@ -130,31 +125,8 @@ func WithRegistrar(registrar registry.ServiceRegistrar) Option {
 	}
 }
 
-func WithScanConfig[T any](c *T) Option {
-	return func(o *Options) {
-		bytes, _ := json.Marshal(o.conf.Service)
-		if err := json.Unmarshal(bytes, c); err != nil {
-			slog.Error("scan config", "err", err)
-		}
-	}
-}
-
-func WithLogger() Option {
-	components[compLogger] = struct{}{}
-	return func(o *Options) {
-		o.conf.Logger = logger.NewConfig()
-		o.conf.Logger.Filename = o.conf.Name
-		logger.InitZapLogger(o.conf.Logger)
-
-		// 提供一个脱敏标签(mask)的配置文件
-		// 扫描标签 并用 ** 替换
-		maskConf := tag.Desensitize(o.conf)
-		cfgData, _ := yaml.Marshal(maskConf)
-		slog.Info("local config info\n" + string(cfgData))
-
-		slog.Info(fmt.Sprintf(initDoneFmt, "config"))
-		slog.Info(fmt.Sprintf(initDoneFmt, compLogger))
-	}
+func WithScanConf[T any]() Option {
+	return func(o *Options) {}
 }
 
 func WithMustRedis() Option {

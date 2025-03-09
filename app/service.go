@@ -3,6 +3,9 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/bobacgo/kit/app/logger"
+	"github.com/bobacgo/kit/pkg/tag"
+	"gopkg.in/yaml.v2"
 	"log"
 	"log/slog"
 	"net"
@@ -38,24 +41,39 @@ type App struct {
 	instance *registry.ServiceInstance
 }
 
-func New(configPath string, opts ...Option) *App {
-	cfg, err := conf.LoadApp(configPath, func(e fsnotify.Event) {
+func New[T any](configPath string, opts ...Option) *App {
+	// 加载配置
+	cfg, err := conf.LoadApp[T](configPath, func(e fsnotify.Event) {
 		slog.Warn("config onchange", "name", e.Name, "op", e.Op)
 	})
 	if err != nil {
 		log.Panic(err)
 	}
 
+	// 初始化日志配置
+	cfg.Logger = logger.NewConfig(logger.WithFilename(cfg.Name))
+	logger.InitZapLogger(cfg.Logger)
+
+	// 提供一个脱敏标签(mask)的配置文件
+	// 扫描标签 并用 ** 替换
+	maskConf := tag.Desensitize(cfg)
+	cfgData, _ := yaml.Marshal(maskConf)
+	slog.Info("local config info\n" + string(cfgData))
+
+	slog.Info(fmt.Sprintf(initDoneFmt, "config"))
+	slog.Info(fmt.Sprintf(initDoneFmt, "logger"))
+
 	wg, _ := errgroup.WithContext(context.Background())
 	o := Options{
 		appId:   uid.UUID(),
 		sigs:    []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT},
+		conf:    conf.GetBasicConf(),
 		wgInit:  wg,
-		conf:    cfg,
 		servers: make(map[string]server.Server),
 	}
 	wg.Go(func() error {
-		o.localCache, err = newLocalCache(cfg.LocalCache.MaxSize)
+		var err error
+		o.localCache, err = newLocalCache(o.conf.LocalCache.MaxSize)
 		return err
 	})
 	for _, opt := range opts {

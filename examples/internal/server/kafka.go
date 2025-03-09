@@ -19,7 +19,7 @@ func (k *KafkaServer) Get(name string) any {
 }
 
 func (k *KafkaServer) Start(ctx context.Context) error {
-	slog.Info("kafka server start", "DSN", config.Cfg.Kafka)
+	slog.Info("kafka server start", "DSN", config.Cfg().Kafka.Addr)
 	return nil
 }
 

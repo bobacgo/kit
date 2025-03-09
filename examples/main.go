@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/bobacgo/kit/examples/config"
 	"log"
 	"log/slog"
 
@@ -11,7 +12,6 @@ import (
 
 	"github.com/bobacgo/kit/app"
 	"github.com/bobacgo/kit/app/conf"
-	"github.com/bobacgo/kit/examples/config"
 	"github.com/bobacgo/kit/examples/internal/app/router"
 )
 
@@ -26,9 +26,7 @@ func init() {
 }
 
 func main() {
-	newApp := app.New(*filepath,
-		app.WithScanConfig(config.Cfg),
-		app.WithLogger(),
+	newApp := app.New[config.Service](*filepath,
 		// app.WithMustDB(),
 		// app.WithMustRedis(),
 		app.WithGinServer(router.Register),

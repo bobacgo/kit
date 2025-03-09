@@ -11,22 +11,42 @@ import (
 	"github.com/spf13/viper"
 )
 
+var (
+	basicCfg   atomic.Value
+	serviceCfg atomic.Value
+)
+
+func GetBasicConf() Basic {
+	cfg, _ := basicCfg.Load().(Basic)
+	return cfg
+}
+
+func GetServiceConf[T any]() T {
+	v, _ := serviceCfg.Load().(T)
+	return v
+}
+
+func SetApp[T any](appCfg *App[T]) {
+	if appCfg == nil {
+		return
+	}
+	basicCfg.Store(appCfg.Basic)
+	serviceCfg.Store(appCfg.Service)
+}
+
 // LoadApp 加载配置文件
 // 配置文件有变化时,会自动全部重新加载配置文件
 // 优先级: (相同key)
 //
 //	1.主配置文件优先级最高
 //	2.configs 数组索引越小优先级越高
-func LoadApp(filepath string, onChange func(e fsnotify.Event)) (*App, error) {
-	var cfgValue atomic.Value
-	cfg := new(App)
-	cfgValue.Store(cfg)
-
+func LoadApp[T any](filepath string, onChange func(e fsnotify.Event)) (*App[T], error) {
+	cfg := new(App[T])
 	// 创建一个新的onChange处理函数,用于处理配置文件的变更
 	createOnChange := func(configPath string) func(e fsnotify.Event) {
 		return func(e fsnotify.Event) {
 			// 配置文件变更时,需要重新加载所有配置
-			newCfg := new(App)
+			newCfg := new(App[T])
 
 			// 先加载主配置文件
 			if err := Load(filepath, newCfg, nil); err != nil {
@@ -56,7 +76,7 @@ func LoadApp(filepath string, onChange func(e fsnotify.Event)) (*App, error) {
 				return
 			}
 
-			cfgValue.Store(newCfg)
+			SetApp(newCfg)
 			onChange(e)
 		}
 	}
@@ -81,11 +101,11 @@ func LoadApp(filepath string, onChange func(e fsnotify.Event)) (*App, error) {
 			return nil, err
 		}
 	}
-
 	if err := validator.Struct(cfg); err != nil {
 		return nil, err
 	}
-	return cfgValue.Load().(*App), nil
+	SetApp(cfg)
+	return cfg, nil
 }
 
 // LoadDefault ./config.yaml

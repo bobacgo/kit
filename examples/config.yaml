@@ -33,6 +33,9 @@ db:
 
 # 业务相关
 service:
+  admin:
+    username: admin01
+    password: admin123123
   errAttemptLimit: 5
   kafka:
     addr: '127.0.0.1:9092'

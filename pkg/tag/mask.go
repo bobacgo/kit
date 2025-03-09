@@ -14,14 +14,16 @@ import (
 // Password string   `json:"password" mask:"^.*$"` // 使用正则表达式
 func Desensitize[T any](data T) T {
 	val := reflect.ValueOf(data)
-	if val.IsNil() { // 如果是 nil，直接返回
+	if val.IsZero() {
 		return data
 	}
 	isPtr := val.Kind() == reflect.Ptr
 	if isPtr {
 		val = val.Elem()
 	}
-
+	if val.Kind() != reflect.Struct { // 如果不是结构体，直接返回
+		return data
+	}
 	// 创建一个新的同类型对象
 	newVal := reflect.New(val.Type()).Elem()
 
@@ -45,7 +47,7 @@ func desensitizeValue(src, dst reflect.Value, fieldType reflect.StructField) {
 			maskAny(field, newField, fieldType)
 			dst.Field(i).Set(newField)
 		}
-	case reflect.Interface, reflect.Ptr: // 处理接口类型和指针类型
+	case reflect.Ptr: // 处理接口类型和指针类型
 		if src.IsNil() {
 			return
 		}

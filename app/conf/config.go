@@ -23,9 +23,9 @@ import (
 		1.主配置文件优先级最高
 		2.configs 数组索引越小优先级越高
 */
-type App struct {
+type App[T any] struct {
 	Basic   `mapstructure:",squash"`
-	Service map[string]any `mapstructure:"service"` // 应用自己的其他配置
+	Service T `mapstructure:"service"` // 应用自己的其他配置
 }
 
 // Basic 服务必要的配置文件

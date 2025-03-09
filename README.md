@@ -49,15 +49,13 @@ func init() {
 }
 
 func main() {
-	newApp := app.New(*filepath,
-		app.WithScanConfig(config.Cfg),
-		app.WithLogger(),
+	newApp := app.New[config.Service](*filepath,
 		// app.WithMustDB(),
 		// app.WithMustRedis(),
 		app.WithGinServer(router.Register),
-    app.WithServer("kafka", func(a *app.Options) kserver.Server {
+		app.WithServer("kafka", func(a *app.Options) kserver.Server {
 			return new(server.KafkaServer)
-		})
+		}),
 	)
 	if err := newApp.Run(); err != nil {
 		log.Panic(err.Error())

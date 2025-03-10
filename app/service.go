@@ -49,10 +49,8 @@ func New[T any](configPath string, opts ...Option) *App {
 	if err != nil {
 		log.Panic(err)
 	}
-
 	// 初始化日志配置
-	cfg.Logger = logger.NewConfig(logger.WithFilename(cfg.Name))
-	logger.InitZapLogger(cfg.Logger)
+	cfg.Logger = newLogger(cfg.Logger)
 
 	// 提供一个脱敏标签(mask)的配置文件
 	// 扫描标签 并用 ** 替换
@@ -133,7 +131,7 @@ func (a *App) Run() error {
 	if opts.registrar != nil {
 		timeout := opts.conf.Registry.Timeout
 		if timeout != "" {
-			ctx, cancel = context.WithTimeout(ctx, timeout.ToTimeDuration())
+			ctx, cancel = context.WithTimeout(ctx, timeout.TimeDuration())
 			defer cancel()
 		}
 		if err := opts.registrar.Registry(ctx, instance); err != nil {
@@ -185,7 +183,7 @@ func (a *App) shutdown(ctx context.Context) error {
 		if duration == "" {
 			duration = "5s"
 		}
-		ctx, cancel := context.WithTimeout(ctx, duration.ToTimeDuration())
+		ctx, cancel := context.WithTimeout(ctx, duration.TimeDuration())
 		defer cancel()
 		if err := opts.registrar.Deregister(ctx, instance); err != nil {
 			slog.Error("deregister service error", "err", err)
@@ -251,6 +249,47 @@ func (a *App) buildInstance() (*registry.ServiceInstance, error) {
 		Metadata:  nil,
 		Endpoints: endpoints,
 	}, nil
+}
+
+func newLogger(logCfg logger.Config) logger.Config {
+	if logCfg.Level == "" {
+		logCfg.Level = logger.LogLevel_Info
+	}
+	opts := []logger.Option{
+		logger.WithLevel(logCfg.Level),
+	}
+	if logCfg.TimeFormat != "" {
+		opts = append(opts, logger.WithTimeFormat(logCfg.TimeFormat))
+	}
+	if logCfg.Filename != "" {
+		opts = append(opts, logger.WithFilename(logCfg.Filename))
+	}
+	if logCfg.Filepath != "" {
+		opts = append(opts, logger.WithFilepath(logCfg.Filepath))
+	}
+	if logCfg.FilenameSuffix != "" {
+		opts = append(opts, logger.WithFilenameSuffix(logCfg.FilenameSuffix))
+	}
+	if logCfg.FileExtension != "" {
+		opts = append(opts, logger.WithFileExtension(logCfg.FileExtension))
+	}
+	if logCfg.FileMaxSize > 0 {
+		opts = append(opts, logger.WithFileMaxSize(logCfg.FileMaxSize))
+	}
+	if logCfg.FileMaxAge > 0 {
+		opts = append(opts, logger.WithFileMaxAge(logCfg.FileMaxAge))
+	}
+	if logCfg.FileJsonEncoder {
+		opts = append(opts, logger.WithFileJsonEncoder(logCfg.FileJsonEncoder))
+	}
+	if logCfg.FileCompress {
+		opts = append(opts, logger.WithFileCompress(logCfg.FileCompress))
+	}
+
+	cfg := logger.NewConfig(opts...)
+	// 初始化日志配置
+	logger.InitZapLogger(cfg)
+	return cfg
 }
 
 func newLocalCache(limit types.ByteSize) (cache.Cache, error) {

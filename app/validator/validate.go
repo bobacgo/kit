@@ -13,6 +13,7 @@ func init() {
 	if Default == nil {
 		Default = validator.New()
 		registerTrans(Default)
+		registerValidation(Default)
 	}
 }
 
@@ -24,6 +25,7 @@ func Init(multipleTrans ...TranslationLanguage) {
 	// 修改gin框架中的Validator引擎属性，实现自定制
 	// 注册一个获取json tag的自定义方法
 	registerTrans(Default, multipleTrans...)
+	registerValidation(Default)
 }
 
 func Struct(obj any) error {

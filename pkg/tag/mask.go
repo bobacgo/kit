@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -28,7 +29,7 @@ func Desensitize[T any](data T) T {
 	newVal := reflect.New(val.Type()).Elem()
 
 	// 递归处理结构体字段
-	desensitizeValue(val, newVal, reflect.StructField{})
+	new(maskTag).parseStruct(val, newVal, reflect.StructField{})
 
 	// 返回新的对象
 	if isPtr {
@@ -37,14 +38,17 @@ func Desensitize[T any](data T) T {
 	return newVal.Interface().(T)
 }
 
-func desensitizeValue(src, dst reflect.Value, fieldType reflect.StructField) {
+type maskTag struct{}
+
+// parseStruct 只处理 struct、ptr、map、slice、array
+func (t *maskTag) parseStruct(src, dst reflect.Value, structField reflect.StructField) {
 	switch src.Kind() {
 	case reflect.Struct: // 处理结构体
 		for i := 0; i < src.NumField(); i++ {
 			field := src.Field(i)
-			fieldType = src.Type().Field(i)
+			structField = src.Type().Field(i)
 			newField := reflect.New(field.Type()).Elem()
-			maskAny(field, newField, fieldType)
+			t.set(field, newField, structField)
 			dst.Field(i).Set(newField)
 		}
 	case reflect.Ptr: // 处理接口类型和指针类型
@@ -53,7 +57,7 @@ func desensitizeValue(src, dst reflect.Value, fieldType reflect.StructField) {
 		}
 		elem := src.Elem()
 		newElement := reflect.New(elem.Type()).Elem()
-		maskAny(elem, newElement, fieldType)
+		t.set(elem, newElement, structField)
 		dst.Set(newElement.Addr())
 	case reflect.Slice, reflect.Array: // 处理 Slice 和 Array
 		if src.Kind() == reflect.Slice && src.IsNil() {
@@ -71,7 +75,7 @@ func desensitizeValue(src, dst reflect.Value, fieldType reflect.StructField) {
 			// 递归处理 Slice 或 Array 的每个元素
 			element := src.Index(i)
 			newElement := reflect.New(element.Type()).Elem()
-			maskAny(element, newElement, fieldType)
+			t.set(element, newElement, structField)
 			newContainer.Index(i).Set(newElement)
 		}
 		dst.Set(newContainer)
@@ -85,7 +89,7 @@ func desensitizeValue(src, dst reflect.Value, fieldType reflect.StructField) {
 			// 递归处理 Map 的每个值
 			value := src.MapIndex(key)
 			newValue := reflect.New(value.Type()).Elem()
-			maskAny(value, newValue, fieldType)
+			t.set(value, newValue, structField)
 			newMap.SetMapIndex(key, newValue)
 		}
 		dst.Set(newMap)
@@ -94,17 +98,17 @@ func desensitizeValue(src, dst reflect.Value, fieldType reflect.StructField) {
 	}
 }
 
-func maskAny(field, newField reflect.Value, fieldType reflect.StructField) {
+func (t *maskTag) set(field, newField reflect.Value, fieldType reflect.StructField) {
 	// 如果字段是Struct、Slice、Array、Map 类型，递归处理
-	if field.Kind() == reflect.Struct || field.Kind() == reflect.Slice || field.Kind() == reflect.Array || field.Kind() == reflect.Map {
-		desensitizeValue(field, newField, fieldType)
+	if slices.Contains(multiElement, field.Kind()) {
+		t.parseStruct(field, newField, fieldType)
 		return
 	}
 	if field.Kind() == reflect.String {
 		// 检查是否有 mask 标签
 		if maskTag, ok := fieldType.Tag.Lookup("mask"); ok {
 			// 执行脱敏逻辑
-			maskedValue := maskString(field.String(), maskTag)
+			maskedValue := t.maskString(field.String(), maskTag)
 			newField.SetString(maskedValue)
 			return
 		}
@@ -113,10 +117,10 @@ func maskAny(field, newField reflect.Value, fieldType reflect.StructField) {
 }
 
 // maskString 对字符串进行脱敏
-func maskString(value, maskTag string) string {
+func (t *maskTag) maskString(value, maskTag string) string {
 	if maskTag == "" {
 		// 使用默认规则：替换中间三分之一部分
-		return defaultMask(value)
+		return t.defaultMask(value)
 	}
 
 	// 使用正则表达式进行脱敏
@@ -132,7 +136,7 @@ func maskString(value, maskTag string) string {
 }
 
 // 默认脱敏规则：替换中间三分之一部分
-func defaultMask(value string) string {
+func (t *maskTag) defaultMask(value string) string {
 	length := len(value)
 	if length == 0 {
 		return value

@@ -1,7 +1,7 @@
 package security
 
 import (
-	"time"
+	"github.com/bobacgo/kit/app/types"
 )
 
 type Config struct {
@@ -15,22 +15,12 @@ type CiphertextConfig struct {
 }
 
 type JwtConfig struct {
-	Secret              Ciphertext `mapstructure:"secret" mask:""`                                 // jwt secret
-	Issuer              string     `mapstructure:"issuer"`                                         // jwt issuer
-	AccessTokenExpired  string     `mapstructure:"accessTokenExpired" yaml:"accessTokenExpired"`   // jwt access token expired
-	RefreshTokenExpired string     `mapstructure:"refreshTokenExpired" yaml:"refreshTokenExpired"` // jwt refresh token expired
+	Secret              Ciphertext     `mapstructure:"secret" mask:""`                                                                    // jwt secret
+	Issuer              string         `mapstructure:"issuer"`                                                                            // jwt issuer
+	AccessTokenExpired  types.Duration `mapstructure:"accessTokenExpired" yaml:"accessTokenExpired" validate:"duration" default:"2h"`     // jwt access token expired
+	RefreshTokenExpired types.Duration `mapstructure:"refreshTokenExpired" yaml:"refreshTokenExpired" validate:"duration" default:"720h"` // jwt refresh token expired
 	// 分布式共享token
 	CacheKeyPrefix string `mapstructure:"cacheKeyPrefix" yaml:"cacheKeyPrefix"` // jwt cache key prefix
-}
-
-func (c *JwtConfig) GetAccessTokenExpired() time.Duration {
-	d, _ := time.ParseDuration(c.AccessTokenExpired)
-	return d
-}
-
-func (c *JwtConfig) GetRefreshTokenExpired() time.Duration {
-	d, _ := time.ParseDuration(c.RefreshTokenExpired)
-	return d
 }
 
 // TODO validate config

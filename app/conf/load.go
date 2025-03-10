@@ -2,6 +2,7 @@ package conf
 
 import (
 	"flag"
+	"github.com/bobacgo/kit/pkg/tag"
 	"log/slog"
 	"sync/atomic"
 
@@ -42,47 +43,13 @@ func SetApp[T any](appCfg *App[T]) {
 //	2.configs 数组索引越小优先级越高
 func LoadApp[T any](filepath string, onChange func(e fsnotify.Event)) (*App[T], error) {
 	cfg := new(App[T])
-	// 创建一个新的onChange处理函数,用于处理配置文件的变更
-	createOnChange := func(configPath string) func(e fsnotify.Event) {
-		return func(e fsnotify.Event) {
-			// 配置文件变更时,需要重新加载所有配置
-			newCfg := new(App[T])
 
-			// 先加载主配置文件
-			if err := Load(filepath, newCfg, nil); err != nil {
-				slog.Error("reload main config failed", "error", err)
-				return
-			}
-
-			// 加载其他配置文件
-			// configs 数组索引越小优先级越高
-			for i := len(newCfg.Configs) - 1; i >= 0; i-- {
-				if err := Load(newCfg.Configs[i], newCfg, nil); err != nil {
-					slog.Error("reload sub config failed", "error", err, "config", newCfg.Configs[i])
-					return
-				}
-			}
-
-			// 主配置文件优先级最高,最后加载以覆盖其他配置
-			if len(newCfg.Configs) > 0 {
-				if err := Load(filepath, newCfg, nil); err != nil {
-					slog.Error("reload main config again failed", "error", err)
-					return
-				}
-			}
-
-			if err := validator.Struct(newCfg); err != nil {
-				slog.Error("reload config failed", "error", err)
-				return
-			}
-
-			SetApp(newCfg)
-			onChange(e)
-		}
+	if onChange != nil {
+		onChange = reload[T](filepath, onChange)
 	}
 
 	// 加载主配置文件
-	if err := Load(filepath, cfg, createOnChange(filepath)); err != nil {
+	if err := Load(filepath, cfg, onChange); err != nil {
 		return nil, err
 	}
 
@@ -90,40 +57,35 @@ func LoadApp[T any](filepath string, onChange func(e fsnotify.Event)) (*App[T], 
 	// configs 数组索引越小优先级越高
 	for i := len(cfg.Configs) - 1; i >= 0; i-- {
 		configPath := cfg.Configs[i] // 捕获循环变量
-		if err := Load(configPath, cfg, createOnChange(configPath)); err != nil {
+		if err := Load(configPath, cfg, onChange); err != nil {
 			return nil, err
 		}
 	}
 
 	// 主配置文件优先级最高,最后加载以覆盖其他配置
 	if len(cfg.Configs) > 0 {
-		if err := Load(filepath, cfg, createOnChange(filepath)); err != nil {
+		if err := Load(filepath, cfg, nil); err != nil {
 			return nil, err
 		}
 	}
 	if err := validator.Struct(cfg); err != nil {
 		return nil, err
 	}
+	cfg = tag.Default(cfg) // 带有默认值 tag 标签赋值
 	SetApp(cfg)
 	return cfg, nil
 }
 
-// LoadDefault ./config.yaml
-func LoadDefault[T any](onChange func(e fsnotify.Event)) (*T, error) {
-	cfgValue := &atomic.Value{}
-	cfg := new(T)
-	cfgValue.Store(cfg)
-
-	err := Load(".", cfg, func(e fsnotify.Event) {
-		newCfg := new(T)
-		if err := Load(".", newCfg, onChange); err != nil {
-			slog.Error("reload config failed", "error", err)
+func reload[T any](path string, onChange func(e fsnotify.Event)) func(e fsnotify.Event) {
+	return func(e fsnotify.Event) {
+		if _, err := LoadApp[T](path, nil); err != nil {
+			slog.Error("reload config error", "err", err)
 			return
 		}
-		cfgValue.Store(newCfg)
-		onChange(e)
-	})
-	return cfgValue.Load().(*T), err
+		if onChange != nil {
+			onChange(e)
+		}
+	}
 }
 
 func Load[T any](filepath string, cfg *T, onChange func(e fsnotify.Event)) error {

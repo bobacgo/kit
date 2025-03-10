@@ -30,9 +30,9 @@ type App[T any] struct {
 
 // Basic 服务必要的配置文件
 type Basic struct {
-	Name    string       `mapstructure:"name" validate:"required"`    // 服务名称
-	Version string       `mapstructure:"version" validate:"required"` // 服务版本
-	Env     enum.EnvType `mapstructure:"env" validate:"required"`
+	Name    string       `mapstructure:"name" validate:"required"`  // 服务名称
+	Version string       `mapstructure:"version" validate:"semver"` // 服务版本
+	Env     enum.EnvType `mapstructure:"env" validate:"oneof=dev test prod"`
 	// 和主配置文件的在同一个目录可以只写文件名加后缀
 	Configs []string `mapstructure:"configs"` // 其他配置文件的路径
 	// 注册中心的地址
@@ -49,6 +49,6 @@ type Basic struct {
 }
 
 type Transport struct {
-	Addr    string         `mapstructure:"addr"`    // 监听地址 0.0.0.0:80
-	Timeout types.Duration `mapstructure:"timeout"` // 超时时间 1s
+	Addr    string         `mapstructure:"addr"`                                      // 监听地址 0.0.0.0:80
+	Timeout types.Duration `mapstructure:"timeout" validate:"duration"  default:"5s"` // 超时时间 1s
 }

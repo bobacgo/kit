@@ -27,7 +27,7 @@ type JWToken struct {
 }
 
 var JwtHelper = NewJWT(&JwtConfig{
-	Secret: "gogo",
+	Secret: "bobacgo",
 }, nil)
 
 func NewJWT(conf *JwtConfig, rdb redis.Cmdable) *JWToken {
@@ -37,8 +37,8 @@ func NewJWT(conf *JwtConfig, rdb redis.Cmdable) *JWToken {
 	return &JWToken{
 		SigningKey:          []byte(conf.Secret),
 		Issuer:              conf.Issuer,
-		AccessTokenExpired:  conf.GetAccessTokenExpired(),
-		RefreshTokenExpired: conf.GetRefreshTokenExpired(),
+		AccessTokenExpired:  conf.AccessTokenExpired.TimeDuration(),
+		RefreshTokenExpired: conf.RefreshTokenExpired.TimeDuration(),
 		cacheKeyPrefix:      conf.CacheKeyPrefix,
 		cache:               rdb,
 	}

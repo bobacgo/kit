@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/bobacgo/kit/examples/config"
 	"log"
 	"log/slog"
+
+	"github.com/bobacgo/kit/examples/config"
 
 	kserver "github.com/bobacgo/kit/app/server"
 	"github.com/bobacgo/kit/examples/internal/server"
@@ -15,7 +16,7 @@ import (
 	"github.com/bobacgo/kit/examples/internal/app/router"
 )
 
-var filepath = flag.String("config", "./config.yaml", "config file path")
+var filepath = flag.String("config", "./examples/config.yaml", "config file path")
 
 func init() {
 	flag.String("name", "admin-service", "service name")

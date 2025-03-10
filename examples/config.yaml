@@ -2,9 +2,9 @@ name: examples-service
 version: '1.0.0'
 env: dev
 configs:
-  - ./deploy/v1.0.0/db.yaml
-  - ./deploy/v1.0.0/logger.yaml
-  - ./deploy/v1.0.0/redis.yaml
+  - ./examples/deploy/v1.0.0/db.yaml
+  - ./examples/deploy/v1.0.0/logger.yaml
+  - ./examples/deploy/v1.0.0/redis.yaml
 server:
   http:
     addr: '0.0.0.0:8080'
@@ -18,7 +18,7 @@ security:
     cipherKey: YpC5wIRf4ZuMvd4f
   jwt:
     secret: YpC5wIRf4ZuMvd4f
-    issuer: gogo-admin
+    issuer: bobacgo
     cacheKeyPrefix: "admin:login_token"
 localCache:
   maxSize: 500MB

@@ -18,9 +18,9 @@ const (
 )
 
 type Config struct {
-	Level      string        `mapstructure:"level"`
-	LevelCh    chan LogLevel `json:"-" yaml:"-"`
-	TimeFormat string        `mapstructure:"timeFormat" yaml:"timeFormat"`
+	Level      LogLevel      `mapstructure:"level" validate:"oneof=debug info error"`
+	LevelCh    chan LogLevel `mapstructure:"-" json:"-" yaml:"-"`
+	TimeFormat string        `mapstructure:"timeFormat" yaml:"timeFormat" default:"2006-01-02 15:04:05"`
 
 	// 完整的文件路径名
 	Filepath        string `mapstructure:"filepath"`
@@ -69,6 +69,7 @@ func NewConfig(opts ...Option) Config {
 // WithLevel 日志级别
 func WithLevel(level LogLevel) Option {
 	return func(o *Config) {
+		o.Level = level
 		o.LevelCh <- level
 	}
 }

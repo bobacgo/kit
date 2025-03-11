@@ -18,20 +18,21 @@ const (
 )
 
 type Config struct {
-	Level      LogLevel      `mapstructure:"level" validate:"oneof=debug info error"`
+	Level LogLevel `mapstructure:"level" validate:"oneof=debug info error"`
+	// 监听日志级别变化
 	LevelCh    chan LogLevel `mapstructure:"-" json:"-" yaml:"-"`
 	TimeFormat string        `mapstructure:"timeFormat" yaml:"timeFormat" default:"2006-01-02 15:04:05"`
 
 	// 完整的文件路径名
 	Filepath        string `mapstructure:"filepath"`
-	Filename        string `mapstructure:"filename"`
-	FilenameSuffix  string `mapstructure:"filenameSuffix" yaml:"filenameSuffix"`
-	FileExtension   string `mapstructure:"fileExtension" yaml:"fileExtension"`
+	Filename        string `mapstructure:"filename" default:"server"`
+	FilenameSuffix  string `mapstructure:"filenameSuffix" yaml:"filenameSuffix" default:"2006-01-02-150405"`
+	FileExtension   string `mapstructure:"fileExtension" yaml:"fileExtension" default:"log"`
 	FileJsonEncoder bool   `mapstructure:"fileJsonEncoder" yaml:"fileJsonEncoder"`
 
-	FileMaxSize  uint16 `mapstructure:"fileSizeMax" yaml:"fileSizeMax"`   // 单位是MB 默认值是 10MB
-	FileMaxAge   uint16 `mapstructure:"fileAgeMax" yaml:"fileAgeMax"`     // 留存天数
-	FileCompress bool   `mapstructure:"fileCompress" yaml:"fileCompress"` // 是否归档压缩
+	FileMaxSize  uint16 `mapstructure:"fileSizeMax" yaml:"fileSizeMax" default:"10"`     // 单位是MB 默认值是 10MB
+	FileMaxAge   uint16 `mapstructure:"fileAgeMax" yaml:"fileAgeMax" default:"180"`      // 留存天数
+	FileCompress bool   `mapstructure:"fileCompress" yaml:"fileCompress" default:"true"` // 是否归档压缩
 }
 
 func (c *Config) SetLevel(level LogLevel) {

@@ -3,9 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/bobacgo/kit/app/logger"
-	"github.com/bobacgo/kit/pkg/tag"
-	"gopkg.in/yaml.v2"
 	"log"
 	"log/slog"
 	"net"
@@ -15,6 +12,10 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/bobacgo/kit/app/logger"
+	"github.com/bobacgo/kit/pkg/tag"
+	"gopkg.in/yaml.v2"
 
 	"github.com/bobacgo/kit/app/cache"
 	"github.com/bobacgo/kit/app/conf"
@@ -44,13 +45,14 @@ type App struct {
 func New[T any](configPath string, opts ...Option) *App {
 	// 加载配置
 	cfg, err := conf.LoadApp[T](configPath, func(e fsnotify.Event) {
+		logger.SetLevel(conf.GetBasicConf().Logger.Level)
 		slog.Warn("config onchange", "name", e.Name, "op", e.Op)
 	})
 	if err != nil {
 		log.Panic(err)
 	}
 	// 初始化日志配置
-	cfg.Logger = newLogger(cfg.Logger)
+	cfg.Logger = newLogger(cfg.Name, cfg.Logger)
 
 	// 提供一个脱敏标签(mask)的配置文件
 	// 扫描标签 并用 ** 替换
@@ -251,7 +253,7 @@ func (a *App) buildInstance() (*registry.ServiceInstance, error) {
 	}, nil
 }
 
-func newLogger(logCfg logger.Config) logger.Config {
+func newLogger(appName string, logCfg logger.Config) logger.Config {
 	if logCfg.Level == "" {
 		logCfg.Level = logger.LogLevel_Info
 	}
@@ -261,8 +263,8 @@ func newLogger(logCfg logger.Config) logger.Config {
 	if logCfg.TimeFormat != "" {
 		opts = append(opts, logger.WithTimeFormat(logCfg.TimeFormat))
 	}
-	if logCfg.Filename != "" {
-		opts = append(opts, logger.WithFilename(logCfg.Filename))
+	if appName != "" {
+		opts = append(opts, logger.WithFilename(appName))
 	}
 	if logCfg.Filepath != "" {
 		opts = append(opts, logger.WithFilepath(logCfg.Filepath))

@@ -12,6 +12,13 @@ import (
 // atomicLevel 动态更新限制日志打印级别
 var atomicLevel zap.AtomicLevel
 
+func SetLevel(l LogLevel) {
+	if l == "" {
+		return
+	}
+	atomicLevel.UnmarshalText([]byte(l))
+}
+
 func InitZapLogger(conf Config) {
 	atomicLevel = zap.NewAtomicLevel()
 	go func() {
@@ -32,7 +39,7 @@ func InitZapLogger(conf Config) {
 
 	core := zapcore.NewTee(fileCore, consoleCore)
 
-	slogHandler := zapslog.NewHandler(core, &zapslog.HandlerOptions{AddSource: true})
+	slogHandler := zapslog.NewHandler(core, zapslog.WithCaller(true))
 	InitSlog(slogHandler)
 
 	// SetLogger(&ZapLogger{logger: zap.New(core, zap.AddCaller(), zap.AddCallerSkip(2))})

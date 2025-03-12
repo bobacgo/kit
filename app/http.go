@@ -2,28 +2,46 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"strings"
-	"time"
 
 	"github.com/bobacgo/kit/app/conf"
+	"github.com/bobacgo/kit/app/server"
 	"github.com/bobacgo/kit/enum"
+	"github.com/pkg/errors"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"github.com/bobacgo/kit/app/server/http/middleware"
 	"github.com/bobacgo/kit/web/r"
 	"github.com/gin-gonic/gin"
 )
 
-func RunMustHttpServer(app *App, register func(e *gin.Engine, a *Options)) {
-	app.wg.Add(1)
-	defer app.wg.Done()
+type HttpServer struct {
+	Opts       *Options
+	RegistryFn func(e *gin.Engine, a *Options)
 
-	cfg := app.opts.Conf()
+	server *http.Server
+}
+
+func NewHttpServer(register func(e *gin.Engine, a *Options), opts *Options) server.Server {
+	return &HttpServer{
+		Opts:       opts,
+		RegistryFn: register,
+	}
+}
+
+func (srv *HttpServer) Get(name string) any {
+	return nil
+}
+
+func (srv *HttpServer) Start(ctx context.Context) error {
+	cfg := srv.Opts.Conf()
 
 	switch cfg.Env {
 	case enum.EnvProd:
@@ -35,7 +53,7 @@ func RunMustHttpServer(app *App, register func(e *gin.Engine, a *Options)) {
 	}
 
 	e := gin.New()
-	e.ContextWithFallback = true
+	e.ContextWithFallback = true // 兼容 gin.Context.Get()
 
 	e.Use(gin.Logger())
 	e.Use(middleware.Recovery())
@@ -45,49 +63,57 @@ func RunMustHttpServer(app *App, register func(e *gin.Engine, a *Options)) {
 		slog.Warn(fmt.Sprintf(`[gin] Running in "%s" mode`, gin.Mode()))
 	}
 
-	healthApi(e, cfg) // provide health API
-	pprofApi(e)       // provide pprof API
+	srv.healthApi(e, cfg) // provide health API
+	srv.swaggerApi(e)     // provide swagger API
+	srv.pprofApi(e)       // provide pprof API
 
-	if register != nil {
-		register(e, &app.opts) // register router
+	if srv.RegistryFn != nil {
+		srv.RegistryFn(e, srv.Opts) // register router
 	}
 
-	srv := &http.Server{Addr: cfg.Server.Http.Addr, Handler: e}
+	// 保证端口监听成功
+	listen, err := net.Listen("tcp", cfg.Server.Http.Addr)
+	if err != nil {
+		return err
+	}
+	srv.server = &http.Server{Handler: e}
 
-	// Initializing the server in a goroutine so that
-	// it won't block the graceful shutdown handling below
-	go func() {
-		localhost, _ := getRegistryUrl("http", cfg.Server.Http.Addr)
-		slog.Info("http server running " + localhost)
-
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	localhost, _ := getRegistryUrl("http", cfg.Server.Http.Addr)
+	slog.Info("http server running " + localhost)
+	slog.Info("API docs " + localhost + "/swagger/index.html")
+	go func(lit net.Listener) {
+		if err := srv.server.Serve(lit); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Panicf("listen: %s\n", err)
 		}
-	}()
+	}(listen)
+	return nil
+}
 
-	<-app.exit
-	slog.Info("Shutting down http server...")
-	// The context is used to inform the server it has 5 seconds to finish
-	// the request it is currently handling
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		slog.Error("Http server forced to shutdown", "err", err)
+func (srv *HttpServer) Stop(ctx context.Context) error {
+	if srv.server == nil {
+		return nil
 	}
-	slog.Info("http server exiting")
+	slog.Info("Shutting down http server...")
+	return srv.server.Shutdown(ctx)
 }
 
 // healthApi http check-up API
-func healthApi(e *gin.Engine, cfg *conf.Basic) {
+func (srv *HttpServer) healthApi(e *gin.Engine, cfg *conf.Basic) {
 	e.GET("/health", func(c *gin.Context) {
 		msg := fmt.Sprintf("%s [env=%s] %s, is active", cfg.Name, cfg.Env, cfg.Version)
 		r.Reply(c, msg)
 	})
 }
 
-// profileApi 添加性能分析路由
+// swaggerApi swagger 文档
+// 访问地址: http://localhost:8080/swagger/index.html
+func (srv *HttpServer) swaggerApi(e *gin.Engine) {
+	e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+}
+
+// pprofApi 添加性能分析路由
 // TODO 只启动gRPC服务时开启一个http服务 提供性能分析
-func pprofApi(e *gin.Engine) {
+func (srv *HttpServer) pprofApi(e *gin.Engine) {
 	// 添加 pprof 路由
 	e.GET("/debug/pprof/", gin.WrapF(pprof.Index))
 	e.GET("/debug/pprof/cmdline", gin.WrapF(pprof.Cmdline))

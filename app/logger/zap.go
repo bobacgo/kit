@@ -39,7 +39,7 @@ func InitZapLogger(conf Config) {
 
 	core := zapcore.NewTee(fileCore, consoleCore)
 
-	slogHandler := zapslog.NewHandler(core, zapslog.WithCaller(true))
+	slogHandler := zapslog.NewHandler(core, zapslog.WithCaller(true), zapslog.AddStacktraceAt(16))
 	InitSlog(slogHandler)
 
 	// SetLogger(&ZapLogger{logger: zap.New(core, zap.AddCaller(), zap.AddCallerSkip(2))})

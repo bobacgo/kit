@@ -34,8 +34,7 @@ import (
 type App struct {
 	opts Options
 
-	wg     sync.WaitGroup
-	exit   chan struct{}
+	wg     *errgroup.Group
 	signal chan os.Signal // 终止服务的信号
 
 	mu       sync.Mutex
@@ -79,14 +78,13 @@ func New[T any](configPath string, opts ...Option) *App {
 	for _, opt := range opts {
 		opt(&o)
 	}
-	if err := o.wgInit.Wait(); err != nil { // 等待 options 实例化结束
+	if err := wg.Wait(); err != nil { // 等待 options 实例化结束
 		log.Panic(err)
 	}
-	slog.Info("app info", "ID", o.AppID(), "name", o.Conf().Name, "version", o.Conf().Version)
-	slog.Info(fmt.Sprintf("use components list %q\n", maps.Keys(components)))
+
 	return &App{
 		opts:   o,
-		exit:   make(chan struct{}),
+		wg:     wg,
 		signal: make(chan os.Signal, 1),
 	}
 }
@@ -97,9 +95,12 @@ func New[T any](configPath string, opts ...Option) *App {
 func (a *App) Run() error {
 	opts := a.opts
 
-	if opts.beforeStart == nil {
-		opts.beforeStart = func(ctx context.Context) error {
-			return nil
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	for _, fn := range opts.beforeStart {
+		if err := fn(ctx); err != nil {
+			return err
 		}
 	}
 
@@ -111,25 +112,21 @@ func (a *App) Run() error {
 	a.instance = instance
 	a.mu.Unlock()
 
-	if opts.httpServer != nil {
-		go RunMustHttpServer(a, opts.httpServer)
-	}
-	if opts.rpcServer != nil {
-		go RunMustRpcServer(a, opts.rpcServer)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+	// start servers
 	for k, srv := range opts.servers {
-		go func(k string, srv server.Server) {
+		a.wg.Go(func() error {
 			if err := srv.Start(ctx); err != nil {
-				log.Panicln(k, err)
+				return errors.Wrapf(err, "start %s error", k)
 			}
 			slog.Info(fmt.Sprintf(initDoneFmt, k))
-		}(k, srv)
+			return nil
+		})
 	}
 
-	// 注册服务 TODO 等待服务启动成功
+	if err = a.wg.Wait(); err != nil { // 等待所有 server 启动完成
+		return errors.Wrap(err, "start servers failed")
+	}
+
 	if opts.registrar != nil {
 		timeout := opts.conf.Registry.Timeout
 		if timeout != "" {
@@ -137,15 +134,16 @@ func (a *App) Run() error {
 			defer cancel()
 		}
 		if err := opts.registrar.Registry(ctx, instance); err != nil {
-			slog.Error("register service error", "err", err)
-			return err
+			return errors.Wrap(err, "register service failed")
 		}
 	}
 
 	slog.Info("server started")
+	slog.Info("app info", "ID", opts.AppID(), "name", opts.Conf().Name, "version", opts.Conf().Version)
+	slog.Info(fmt.Sprintf("use components list %q\n", maps.Keys(components)))
 
-	if opts.afterStart != nil {
-		if err := opts.afterStart(context.Background(), &opts); err != nil {
+	for _, fn := range opts.afterStart {
+		if err := fn(ctx, &opts); err != nil {
 			return err
 		}
 	}
@@ -154,9 +152,11 @@ func (a *App) Run() error {
 	signal.Notify(a.signal, opts.sigs...)
 	<-a.signal
 
-	err = a.shutdown(ctx)
+	if err = a.shutdown(ctx); err != nil {
+		return err
+	}
 	slog.Info("service has exited")
-	return err
+	return nil
 }
 
 // Stop 手动停止服务
@@ -170,8 +170,8 @@ func (a *App) Stop() {
 func (a *App) shutdown(ctx context.Context) error {
 	opts := a.opts
 
-	if opts.beforeStop != nil {
-		if err := opts.beforeStop(ctx, &opts); err != nil {
+	for _, fn := range opts.beforeStop {
+		if err := fn(ctx, &opts); err != nil {
 			return err
 		}
 	}
@@ -188,30 +188,35 @@ func (a *App) shutdown(ctx context.Context) error {
 		ctx, cancel := context.WithTimeout(ctx, duration.TimeDuration())
 		defer cancel()
 		if err := opts.registrar.Deregister(ctx, instance); err != nil {
-			slog.Error("deregister service error", "err", err)
-			return err
+			return errors.Wrap(err, "deregister service error")
 		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	for k, srv := range opts.servers {
-		if err := srv.Stop(ctx); err != nil {
-			slog.Error("stop service error", k, err)
-		}
+		a.wg.Go(func() error {
+			if err := srv.Stop(ctx); err != nil { // 出错也不能影响其他服务的停止
+				slog.Error("stop server error", k, err)
+			} else {
+				slog.Info("stop " + k + " service success")
+			}
+			return nil
+		})
 	}
-
-	close(a.exit) // 通知http、rpc服务退出信号
 
 	// 1.等待 Http 服务结束退出
 	// 2.等待 RPC 服务结束退出
-	a.wg.Wait()
+	if err := a.wg.Wait(); err != nil {
+		return err
+	}
 
-	if opts.afterStop != nil {
-		if err := opts.afterStop(ctx, &opts); err != nil {
+	for _, fn := range opts.afterStop {
+		if err := fn(ctx, &opts); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 

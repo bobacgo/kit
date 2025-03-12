@@ -1,0 +1,31 @@
+definitions:
+  v1.UserPageListResp:
+    properties:
+      id:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /v1/user/pageList:
+    post:
+      consumes:
+      - application/json
+      description: 获取用户分页列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            items:
+              $ref: '#/definitions/v1.UserPageListResp'
+            type: array
+      summary: 用户管理
+      tags:
+      - 用户
+swagger: "2.0"

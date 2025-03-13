@@ -1,15 +1,15 @@
 package g
 
 import (
-	"errors"
-
+	"github.com/bobacgo/kit/web/r/errs"
+	"github.com/pkg/errors"
 	"golang.org/x/exp/maps"
 	"gorm.io/gorm"
 )
 
 type FindByIDService[T any] struct{}
 
-func (*FindByIDService[T]) FindByID(tx *gorm.DB, id string) (T, *Error) {
+func (*FindByIDService[T]) FindByID(tx *gorm.DB, id string) (T, error) {
 	var m T
 	err := tx.Where("id = ?", id).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -28,7 +28,7 @@ func (*FindByIDService[T]) FindByID(tx *gorm.DB, id string) (T, *Error) {
 //	}
 type UniqueService[T any] struct{}
 
-func (*UniqueService[T]) Verify(tx *gorm.DB, q map[string]any) *Error {
+func (*UniqueService[T]) Verify(tx *gorm.DB, q map[string]any) error {
 	tx = tx.Model(new(T)).Select(maps.Keys(q))
 	for k, v := range q {
 		if k != "id" {
@@ -37,7 +37,7 @@ func (*UniqueService[T]) Verify(tx *gorm.DB, q map[string]any) *Error {
 	}
 	var list []map[string]any
 	if err := tx.Limit(len(q)).Find(&list).Error; err != nil {
-		return WrapError(err, "校验唯一出错")
+		return errors.WithMessage(err, "校验唯一出错")
 	}
 	if len(list) > 0 {
 		msg := make(map[string]any, 0)
@@ -52,10 +52,7 @@ func (*UniqueService[T]) Verify(tx *gorm.DB, q map[string]any) *Error {
 			}
 		}
 		if len(msg) > 0 {
-			return &Error{
-				Text: ErrRecordRepeat.Error(),
-				Misc: msg,
-			}
+			return errs.DateBusy
 		}
 	}
 	return nil

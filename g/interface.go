@@ -13,8 +13,8 @@ type IBaseApi interface {
 }
 
 type IBase[T any, Q any] interface {
-	PageList(Q) (*page.Data[T], *Error)
-	Create(T) *Error
-	Update(T) *Error
-	Delete(int) *Error
+	PageList(Q) (*page.Data[T], error)
+	Create(T) error
+	Update(T) error
+	Delete(int) error
 }

@@ -55,11 +55,8 @@ type Options struct {
 	endpoints []*url.URL
 	registrar registry.ServiceRegistrar
 
-	// 插件功能 如 服务需要依赖 MongoDB、Elasticsearch等
+	// 插件功能 如 服务需要依赖 Kafka 等常驻进程服务
 	servers map[string]server.Server
-
-	// httpServer func(e *gin.Engine, a *Options)  // 基于 gin 的 http 服务
-	// rpcServer func(s *grpc.Server, a *Options) // 基于 grpc 的 rpc 服务
 }
 
 // AppID 获取应用程序启动实例ID
@@ -168,6 +165,7 @@ func WithMustDB() Option {
 	}
 }
 
+// WithServer 注入 server， 需要指定唯一的key
 func WithServer(name string, srv func(a *Options) server.Server) Option {
 	components[name] = struct{}{}
 	return func(o *Options) {

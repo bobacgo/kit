@@ -205,8 +205,6 @@ func (a *App) shutdown(ctx context.Context) error {
 		})
 	}
 
-	// 1.等待 Http 服务结束退出
-	// 2.等待 RPC 服务结束退出
 	if err := a.wg.Wait(); err != nil {
 		return err
 	}

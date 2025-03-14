@@ -6,8 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Register(e *gin.Engine, app *app.Options) {
-	r := e.Group("")
+func Register(r *gin.RouterGroup, app *app.AppOptions) {
 
 	userHandler := handler.NewUserHandler()
 	// sys user

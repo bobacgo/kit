@@ -5,7 +5,6 @@ import (
 	"flag"
 	"log"
 	"log/slog"
-	"time"
 
 	"github.com/bobacgo/kit/examples/config"
 	_ "github.com/bobacgo/kit/examples/docs"
@@ -35,19 +34,11 @@ func main() {
 		// app.WithMustRedis(),
 		app.WithGinServer(router.Register),
 		app.WithGrpcServer(nil),
-		app.WithServer(server.KafkaServerName, func(a *app.Options) kserver.Server {
+		app.WithServer(server.KafkaServerName, func(a *app.AppOptions) kserver.Server {
 			return new(server.KafkaServer)
 		}),
-		app.WithAfterStart(func(ctx context.Context, opts *app.Options) error {
+		app.WithAfterStart(func(ctx context.Context, opts *app.AppOptions) error {
 			slog.Info("after start")
-			return nil
-		}),
-		app.WithAfterStart(func(ctx context.Context, opts *app.Options) error {
-			time.Sleep(3 * time.Second)
-			slog.Debug("这是一个debug", "level", "debug")
-			slog.Info("这是一个info", "level", "info")
-			slog.Warn("这是一个warn", "level", "warn")
-			slog.Error("这是一个error", "level", "error")
 			return nil
 		}),
 	)

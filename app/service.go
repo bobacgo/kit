@@ -32,16 +32,15 @@ import (
 )
 
 type App struct {
-	opts Options
+	AppOptions
 
-	wg     *errgroup.Group
 	signal chan os.Signal // 终止服务的信号
 
 	mu       sync.Mutex
 	instance *registry.ServiceInstance
 }
 
-func New[T any](configPath string, opts ...Option) *App {
+func New[T any](configPath string, opts ...AppOption) *App {
 	// 加载配置
 	cfg, err := conf.LoadApp[T](configPath, func(e fsnotify.Event) {
 		logger.SetLevel(conf.GetBasicConf().Logger.Level)
@@ -63,11 +62,11 @@ func New[T any](configPath string, opts ...Option) *App {
 	slog.Info(fmt.Sprintf(initDoneFmt, "logger"))
 
 	wg, _ := errgroup.WithContext(context.Background())
-	o := Options{
+	o := AppOptions{
 		appId:   uid.UUID(),
 		sigs:    []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT},
 		conf:    conf.GetBasicConf(),
-		wgInit:  wg,
+		wg:      wg,
 		servers: make(map[string]server.Server),
 	}
 	wg.Go(func() error {
@@ -83,9 +82,8 @@ func New[T any](configPath string, opts ...Option) *App {
 	}
 
 	return &App{
-		opts:   o,
-		wg:     wg,
-		signal: make(chan os.Signal, 1),
+		AppOptions: o,
+		signal:     make(chan os.Signal, 1),
 	}
 }
 
@@ -93,12 +91,10 @@ func New[T any](configPath string, opts ...Option) *App {
 // 1.注册服务
 // 2.退出相关组件或服务
 func (a *App) Run() error {
-	opts := a.opts
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	for _, fn := range opts.beforeStart {
+	for _, fn := range a.beforeStart {
 		if err := fn(ctx); err != nil {
 			return err
 		}
@@ -113,7 +109,7 @@ func (a *App) Run() error {
 	a.mu.Unlock()
 
 	// start servers
-	for k, srv := range opts.servers {
+	for k, srv := range a.servers {
 		a.wg.Go(func() error {
 			if err := srv.Start(ctx); err != nil {
 				return errors.Wrapf(err, "start %s error", k)
@@ -127,29 +123,29 @@ func (a *App) Run() error {
 		return errors.Wrap(err, "start servers failed")
 	}
 
-	if opts.registrar != nil {
-		timeout := opts.conf.Registry.Timeout
+	if a.registrar != nil {
+		timeout := a.Conf().Registry.Timeout
 		if timeout != "" {
 			ctx, cancel = context.WithTimeout(ctx, timeout.TimeDuration())
 			defer cancel()
 		}
-		if err := opts.registrar.Registry(ctx, instance); err != nil {
+		if err := a.registrar.Registry(ctx, instance); err != nil {
 			return errors.Wrap(err, "register service failed")
 		}
 	}
 
 	slog.Info("server started")
-	slog.Info("app info", "ID", opts.AppID(), "name", opts.Conf().Name, "version", opts.Conf().Version)
+	slog.Info("app info", "ID", a.AppID(), "name", a.Conf().Name, "version", a.Conf().Version)
 	slog.Info(fmt.Sprintf("use components list %q\n", maps.Keys(components)))
 
-	for _, fn := range opts.afterStart {
-		if err := fn(ctx, &opts); err != nil {
+	for _, fn := range a.afterStart {
+		if err := fn(ctx, &a.AppOptions); err != nil {
 			return err
 		}
 	}
 
 	// 阻塞并监听退出信号
-	signal.Notify(a.signal, opts.sigs...)
+	signal.Notify(a.signal, a.sigs...)
 	<-a.signal
 
 	if err = a.shutdown(ctx); err != nil {
@@ -168,10 +164,8 @@ func (a *App) Stop() {
 // 1.注销服务
 // 2.退出 http、grpc服务
 func (a *App) shutdown(ctx context.Context) error {
-	opts := a.opts
-
-	for _, fn := range opts.beforeStop {
-		if err := fn(ctx, &opts); err != nil {
+	for _, fn := range a.beforeStop {
+		if err := fn(ctx, &a.AppOptions); err != nil {
 			return err
 		}
 	}
@@ -180,21 +174,21 @@ func (a *App) shutdown(ctx context.Context) error {
 	instance := a.instance
 	a.mu.Unlock()
 
-	if opts.registrar != nil && instance != nil {
-		duration := opts.conf.Registry.Timeout
+	if a.registrar != nil && instance != nil {
+		duration := a.Conf().Registry.Timeout
 		if duration == "" {
 			duration = "5s"
 		}
 		ctx, cancel := context.WithTimeout(ctx, duration.TimeDuration())
 		defer cancel()
-		if err := opts.registrar.Deregister(ctx, instance); err != nil {
+		if err := a.registrar.Deregister(ctx, instance); err != nil {
 			return errors.Wrap(err, "deregister service error")
 		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
-	for k, srv := range opts.servers {
+	for k, srv := range a.servers {
 		a.wg.Go(func() error {
 			if err := srv.Stop(ctx); err != nil { // 出错也不能影响其他服务的停止
 				slog.Error("stop server error", k, err)
@@ -209,8 +203,8 @@ func (a *App) shutdown(ctx context.Context) error {
 		return err
 	}
 
-	for _, fn := range opts.afterStop {
-		if err := fn(ctx, &opts); err != nil {
+	for _, fn := range a.afterStop {
+		if err := fn(ctx, &a.AppOptions); err != nil {
 			return err
 		}
 	}
@@ -219,11 +213,9 @@ func (a *App) shutdown(ctx context.Context) error {
 }
 
 func (a *App) buildInstance() (*registry.ServiceInstance, error) {
-	opts := a.opts
-
 	endpoints := make([]string, 0)
 	httpScheme, grpcScheme := false, false
-	for _, e := range opts.endpoints {
+	for _, e := range a.endpoints {
 		switch strings.ToLower(e.Scheme) {
 		case "https", "http":
 			httpScheme = true
@@ -233,24 +225,26 @@ func (a *App) buildInstance() (*registry.ServiceInstance, error) {
 		endpoints = append(endpoints, e.String())
 	}
 
-	if !httpScheme && opts.conf.Server.Http.Addr != "" {
-		if rUrl, err := getRegistryUrl("http", opts.conf.Server.Http.Addr); err == nil {
+	serverCfg := a.Conf().Server
+
+	if !httpScheme && serverCfg.Http.Addr != "" {
+		if rUrl, err := getRegistryUrl("http", serverCfg.Http.Addr); err == nil {
 			endpoints = append(endpoints, rUrl)
 		} else {
 			slog.Error("get http registry err", "err", err)
 		}
 	}
-	if !grpcScheme && opts.conf.Server.Rpc.Addr != "" {
-		if rUrl, err := getRegistryUrl("grpc", opts.conf.Server.Rpc.Addr); err == nil {
+	if !grpcScheme && serverCfg.Rpc.Addr != "" {
+		if rUrl, err := getRegistryUrl("grpc", serverCfg.Rpc.Addr); err == nil {
 			endpoints = append(endpoints, rUrl)
 		} else {
 			slog.Error("get grpc registry err", "err", err)
 		}
 	}
 	return &registry.ServiceInstance{
-		ID:        opts.appId,
-		Name:      opts.conf.Name,
-		Version:   opts.conf.Version,
+		ID:        a.appId,
+		Name:      a.Conf().Name,
+		Version:   a.conf.Version,
 		Metadata:  nil,
 		Endpoints: endpoints,
 	}, nil

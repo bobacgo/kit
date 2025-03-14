@@ -23,13 +23,13 @@ import (
 )
 
 type HttpServer struct {
-	Opts       *Options
-	RegistryFn func(e *gin.Engine, a *Options)
+	Opts       *AppOptions
+	RegistryFn func(e *gin.Engine, a *AppOptions)
 
 	server *http.Server
 }
 
-func NewHttpServer(register func(e *gin.Engine, a *Options), opts *Options) server.Server {
+func NewHttpServer(register func(e *gin.Engine, a *AppOptions), opts *AppOptions) server.Server {
 	return &HttpServer{
 		Opts:       opts,
 		RegistryFn: register,

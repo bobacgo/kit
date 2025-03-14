@@ -34,15 +34,15 @@ const initDoneFmt = " [%s] init done."
 
 var components = make(map[string]struct{}) // 组件名列表
 
-type Option func(o *Options)
+type AppOption func(o *AppOptions)
 
-type Options struct {
+type AppOptions struct {
 	appId string      // 应用程序启动实例ID
 	sigs  []os.Signal // 监听的程序退出信号
 
 	conf conf.Basic
 
-	wgInit *errgroup.Group // 用于并发初始化组件
+	wg *errgroup.Group // 用于并发初始化组件
 	// 内置功能
 	localCache cache.Cache
 	redis      redis.UniversalClient
@@ -50,7 +50,7 @@ type Options struct {
 
 	// hook func
 	beforeStart                       []func(ctx context.Context) error
-	afterStart, beforeStop, afterStop []func(ctx context.Context, opts *Options) error
+	afterStart, beforeStop, afterStop []func(ctx context.Context, opts *AppOptions) error
 
 	endpoints []*url.URL
 	registrar registry.ServiceRegistrar
@@ -60,12 +60,12 @@ type Options struct {
 }
 
 // AppID 获取应用程序启动实例ID
-func (o *Options) AppID() string {
+func (o *AppOptions) AppID() string {
 	return o.appId
 }
 
 // Conf 获取公共配置(eg app info、logger config、db config 、redis config)
-func (o *Options) Conf() *conf.Basic {
+func (o *AppOptions) Conf() *conf.Basic {
 	basicConf := conf.GetBasicConf()
 	return &basicConf
 }
@@ -73,24 +73,24 @@ func (o *Options) Conf() *conf.Basic {
 // LocalCache 获取本地缓存
 // 1.一级缓存 变动小、容量少。容量固定，有淘汰策略。
 // 2.不适合分布式数据共享。
-func (o *Options) LocalCache() cache.Cache {
+func (o *AppOptions) LocalCache() cache.Cache {
 	return o.localCache
 }
 
 // DB 获取数据库连接
 // DB gorm 关系型数据库 -- 持久化
-func (o *Options) DB() *db.DBManager {
+func (o *AppOptions) DB() *db.DBManager {
 	return o.db
 }
 
 // Redis 获取redis client
 // CacheDB 二级缓存 容量大，有网络IO延迟
-func (o *Options) Redis() redis.UniversalClient {
+func (o *AppOptions) Redis() redis.UniversalClient {
 	return o.redis
 }
 
 // Server 获取自己注入的组件服务
-func (o *Options) Server(name string) (any, bool) {
+func (o *AppOptions) Server(name string) (any, bool) {
 	srv, ok := o.servers[name]
 	if !ok {
 		return nil, false
@@ -98,40 +98,40 @@ func (o *Options) Server(name string) (any, bool) {
 	return srv.Get(name), true
 }
 
-func WithAppID(id string) Option {
-	return func(o *Options) {
+func WithAppID(id string) AppOption {
+	return func(o *AppOptions) {
 		if id != "" {
 			o.appId = id
 		}
 	}
 }
 
-func WithSignal(sigs []os.Signal) Option {
-	return func(o *Options) {
+func WithSignal(sigs []os.Signal) AppOption {
+	return func(o *AppOptions) {
 		if len(sigs) > 0 {
 			o.sigs = sigs
 		}
 	}
 }
 
-func WithEndpoints(endpoints []*url.URL) Option {
-	return func(o *Options) {
+func WithEndpoints(endpoints []*url.URL) AppOption {
+	return func(o *AppOptions) {
 		if len(endpoints) > 0 {
 			o.endpoints = endpoints
 		}
 	}
 }
 
-func WithRegistrar(registrar registry.ServiceRegistrar) Option {
-	return func(o *Options) {
+func WithRegistrar(registrar registry.ServiceRegistrar) AppOption {
+	return func(o *AppOptions) {
 		o.registrar = registrar
 	}
 }
 
-func WithMustRedis() Option {
+func WithMustRedis() AppOption {
 	components[compRedis] = struct{}{}
-	return func(o *Options) {
-		o.wgInit.Go(func() error {
+	return func(o *AppOptions) {
+		o.wg.Go(func() error {
 			var err error
 			o.redis, err = cache.NewRedis(o.conf.Redis)
 			if err != nil {
@@ -143,10 +143,10 @@ func WithMustRedis() Option {
 	}
 }
 
-func WithMustDB() Option {
+func WithMustDB() AppOption {
 	components[compDB] = struct{}{}
-	return func(o *Options) {
-		o.wgInit.Go(func() error {
+	return func(o *AppOptions) {
+		o.wg.Go(func() error {
 			smMap := make(map[string]db.InstanceConfig, len(o.conf.DB))
 			for k, c := range o.conf.DB {
 				smMap[k] = db.InstanceConfig{
@@ -166,53 +166,53 @@ func WithMustDB() Option {
 }
 
 // WithServer 注入 server， 需要指定唯一的key
-func WithServer(name string, srv func(a *Options) server.Server) Option {
+func WithServer(name string, srv func(a *AppOptions) server.Server) AppOption {
 	components[name] = struct{}{}
-	return func(o *Options) {
+	return func(o *AppOptions) {
 		if srv != nil {
 			o.servers[name] = srv(o)
 		}
 	}
 }
 
-func WithGinServer(svr func(e *gin.Engine, a *Options)) Option {
-	return WithServer(compHttp, func(a *Options) server.Server {
+func WithGinServer(svr func(e *gin.Engine, a *AppOptions)) AppOption {
+	return WithServer(compHttp, func(a *AppOptions) server.Server {
 		return NewHttpServer(svr, a)
 	})
 }
 
-func WithGrpcServer(svr func(s *grpc.Server, a *Options)) Option {
-	return WithServer(compRpc, func(a *Options) server.Server {
-		return NewRpcServer(svr, a)
+func WithGrpcServer(svr func(s *grpc.Server, a *AppOptions), grpcServerOpts ...grpc.ServerOption) AppOption {
+	return WithServer(compRpc, func(a *AppOptions) server.Server {
+		return NewRpcServer(svr, a, grpcServerOpts...)
 	})
 }
 
-func WithBeforeStart(fn func(ctx context.Context) error) Option {
-	return func(o *Options) {
+func WithBeforeStart(fn func(ctx context.Context) error) AppOption {
+	return func(o *AppOptions) {
 		if fn != nil {
 			o.beforeStart = append(o.beforeStart, fn)
 		}
 	}
 }
 
-func WithAfterStart(fn func(ctx context.Context, opts *Options) error) Option {
-	return func(o *Options) {
+func WithAfterStart(fn func(ctx context.Context, opts *AppOptions) error) AppOption {
+	return func(o *AppOptions) {
 		if fn != nil {
 			o.afterStart = append(o.afterStart, fn)
 		}
 	}
 }
 
-func WithBeforeStop(fn func(ctx context.Context, opts *Options) error) Option {
-	return func(o *Options) {
+func WithBeforeStop(fn func(ctx context.Context, opts *AppOptions) error) AppOption {
+	return func(o *AppOptions) {
 		if fn != nil {
 			o.beforeStop = append(o.beforeStop, fn)
 		}
 	}
 }
 
-func WithAfterStop(fn func(ctx context.Context, opts *Options) error) Option {
-	return func(o *Options) {
+func WithAfterStop(fn func(ctx context.Context, opts *AppOptions) error) AppOption {
+	return func(o *AppOptions) {
 		if fn != nil {
 			o.afterStop = append(o.afterStop, fn)
 		}

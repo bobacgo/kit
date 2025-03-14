@@ -1,44 +1,26 @@
 package client
 
 import (
-	"log"
-	"sync"
-
+	"github.com/bobacgo/kit/app/conf"
+	"github.com/bobacgo/kit/app/server/rpc/interceptor"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/timeout"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
-type RpcClient interface {
-	Get() *grpc.ClientConn
-	Put(*grpc.ClientConn)
-}
-
-type rpcClient struct {
-	pool *sync.Pool
-}
-
-func NewRpcClient(target string, opts ...grpc.DialOption) RpcClient {
-	return &rpcClient{pool: &sync.Pool{New: func() any {
-		conn, err := grpc.Dial(target, opts...)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return conn
-	}}}
-}
-
-func (rpc *rpcClient) Get() *grpc.ClientConn {
-	conn := rpc.pool.Get().(*grpc.ClientConn)
-	if conn.GetState() == connectivity.Shutdown || conn.GetState() == connectivity.TransientFailure {
-		conn.Close()
-		conn = rpc.pool.New().(*grpc.ClientConn)
+func NewGRPC(transport conf.Transport, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	if transport.Timeout == "" {
+		transport.Timeout = "5s"
 	}
-	return conn
-}
-func (rpc *rpcClient) Put(conn *grpc.ClientConn) {
-	if conn.GetState() == connectivity.Shutdown || conn.GetState() == connectivity.TransientFailure {
-		conn.Close()
-		return
-	}
-	rpc.pool.Put(conn)
+	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+		grpc.WithChainUnaryInterceptor(
+			timeout.UnaryClientInterceptor(transport.Timeout.TimeDuration()),
+			logging.UnaryClientInterceptor(interceptor.Logger(), logging.WithFieldsFromContext(interceptor.LogTraceID))),
+		grpc.WithChainStreamInterceptor(
+			logging.StreamClientInterceptor(interceptor.Logger(), logging.WithFieldsFromContext(interceptor.LogTraceID))),
+	)
+	return grpc.NewClient(transport.Addr, opts...)
 }

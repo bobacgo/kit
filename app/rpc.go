@@ -33,7 +33,7 @@ func NewRpcServer(registry func(s *grpc.Server, a *AppOptions), opts *AppOptions
 	}
 }
 
-func (srv *RpcServer) Get(name string) any {
+func (srv *RpcServer) Get() any {
 	return nil
 }
 
@@ -75,7 +75,7 @@ func (srv *RpcServer) Stop(ctx context.Context) error {
 }
 
 func (srv *RpcServer) defaultInterceptor() {
-	srv.grpcServerOpts = append(srv.grpcServerOpts, grpc.StatsHandler(otelgrpc.NewServerHandler()),
+	defaultOpts := append(srv.grpcServerOpts, grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor( // 单向拦截器
 			logging.UnaryServerInterceptor(interceptor.Logger(), logging.WithFieldsFromContext(interceptor.LogTraceID)),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(interceptor.Recovery)),
@@ -83,4 +83,5 @@ func (srv *RpcServer) defaultInterceptor() {
 			logging.StreamServerInterceptor(interceptor.Logger(), logging.WithFieldsFromContext(interceptor.LogTraceID)),
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(interceptor.Recovery)),
 		))
+	srv.grpcServerOpts = append(defaultOpts, srv.grpcServerOpts...)
 }

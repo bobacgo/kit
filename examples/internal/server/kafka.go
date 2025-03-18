@@ -2,28 +2,27 @@ package server
 
 import (
 	"context"
-	"github.com/bobacgo/kit/examples/config"
 	"log/slog"
 )
 
 const (
-	KafkaServerName = "kafka"
+	JobServerName = "job"
 )
 
-type KafkaServer struct {
-	conn any
+type JobServer struct {
+	task []string
 }
 
-func (k *KafkaServer) Get(name string) any {
-	return k.conn
+func (k *JobServer) Get() any {
+	return k
 }
 
-func (k *KafkaServer) Start(ctx context.Context) error {
-	slog.Info("kafka server start", "DSN", config.Cfg().Kafka.Addr)
+func (k *JobServer) Start(ctx context.Context) error {
+	slog.Info("job server start")
 	return nil
 }
 
-func (k *KafkaServer) Stop(ctx context.Context) error {
-	slog.Info("kafka server stop")
+func (k *JobServer) Stop(ctx context.Context) error {
+	slog.Info("job server stop")
 	return nil
 }

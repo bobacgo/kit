@@ -21,7 +21,7 @@ security:
     issuer: bobacgo
     cacheKeyPrefix: "admin:login_token"
 localCache:
-  maxSize: 500MB
+  maxSize: 512MB
 db:
   default:
     dryRun: false # 是否空跑 (用于调试,数据不会写入数据库)
@@ -30,6 +30,9 @@ db:
     maxLifeTime: 1
     maxOpenConn: 100
     maxIdleConn: 30
+kafka:
+  addrs:
+    - '127.0.0.1:9092'
 
 # 业务相关
 service:

@@ -8,7 +8,7 @@ func Cfg() Service {
 
 type Service struct {
 	Admin           Admin          `mapstructure:"admin" yaml:"admin"`
-	ErrAttemptLimit int            `mapstructure:"errAttemptLimit" yaml:"errAttemptLimit" mask:""`
+	ErrAttemptLimit int            `mapstructure:"errAttemptLimit" yaml:"errAttemptLimit"`
 	Kafka           conf.Transport `mapstructure:"kafka" yaml:"kafka"`
 }
 

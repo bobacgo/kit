@@ -3,14 +3,13 @@ package main
 import (
 	"context"
 	"flag"
+	kserver "github.com/bobacgo/kit/app/server"
+	"github.com/bobacgo/kit/examples/internal/config"
+	"github.com/bobacgo/kit/examples/internal/server"
 	"log"
 	"log/slog"
 
-	"github.com/bobacgo/kit/examples/config"
 	_ "github.com/bobacgo/kit/examples/docs"
-
-	kserver "github.com/bobacgo/kit/app/server"
-	"github.com/bobacgo/kit/examples/internal/server"
 
 	"github.com/bobacgo/kit/app"
 	"github.com/bobacgo/kit/app/conf"
@@ -32,10 +31,11 @@ func main() {
 	newApp := app.New[config.Service](*filepath,
 		// app.WithMustDB(),
 		// app.WithMustRedis(),
+		// app.WithKafka(),
 		app.WithGinServer(router.Register),
 		app.WithGrpcServer(nil),
-		app.WithServer(server.KafkaServerName, func(a *app.AppOptions) kserver.Server {
-			return new(server.KafkaServer)
+		app.WithServer(server.JobServerName, func(a *app.AppOptions) kserver.Server {
+			return new(server.JobServer)
 		}),
 		app.WithAfterStart(func(ctx context.Context, opts *app.AppOptions) error {
 			slog.Info("after start")

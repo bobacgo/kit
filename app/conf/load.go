@@ -2,6 +2,7 @@ package conf
 
 import (
 	"flag"
+	"fmt"
 	"github.com/bobacgo/kit/pkg/tag"
 	"log/slog"
 	"sync/atomic"
@@ -69,7 +70,7 @@ func LoadApp[T any](filepath string, onChange func(e fsnotify.Event)) (*App[T], 
 		}
 	}
 	if err := validator.Struct(cfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("validate config error: %w\n", err)
 	}
 	cfg = tag.Default(cfg) // 带有默认值 tag 标签赋值
 	SetApp(cfg)

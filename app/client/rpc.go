@@ -14,13 +14,17 @@ func NewGRPC(transport conf.Transport, opts ...grpc.DialOption) (*grpc.ClientCon
 	if transport.Timeout == "" {
 		transport.Timeout = "5s"
 	}
-	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()),
+	defaultOpts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials()),
+		// 负载均衡策略 默认是 pick_first，所以我们换成 round_robin
+		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [{"round_robin":{}}]}`), // This sets the initial balancing policy.
 		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 		grpc.WithChainUnaryInterceptor(
 			timeout.UnaryClientInterceptor(transport.Timeout.TimeDuration()),
 			logging.UnaryClientInterceptor(interceptor.Logger(), logging.WithFieldsFromContext(interceptor.LogTraceID))),
 		grpc.WithChainStreamInterceptor(
 			logging.StreamClientInterceptor(interceptor.Logger(), logging.WithFieldsFromContext(interceptor.LogTraceID))),
-	)
-	return grpc.NewClient(transport.Addr, opts...)
+	}
+
+	defaultOpts = append(defaultOpts, opts...)
+	return grpc.NewClient(transport.Addr, defaultOpts...)
 }

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/bobacgo/kit/app/mq/kafka"
 	"github.com/bobacgo/kit/app/server"
 	"github.com/pkg/errors"
 
@@ -28,6 +29,7 @@ const (
 	compDB    = "db"
 	compHttp  = "http"
 	compRpc   = "rpc"
+	compKafka = "kafka"
 )
 
 const initDoneFmt = " [%s] init done."
@@ -95,9 +97,10 @@ func (o *AppOptions) Server(name string) (any, bool) {
 	if !ok {
 		return nil, false
 	}
-	return srv.Get(name), true
+	return srv.Get(), true
 }
 
+// WithAppID 设置appID，默认UUID
 func WithAppID(id string) AppOption {
 	return func(o *AppOptions) {
 		if id != "" {
@@ -106,6 +109,7 @@ func WithAppID(id string) AppOption {
 	}
 }
 
+// WithSignal 设置可监听的退出信号
 func WithSignal(sigs []os.Signal) AppOption {
 	return func(o *AppOptions) {
 		if len(sigs) > 0 {
@@ -114,6 +118,7 @@ func WithSignal(sigs []os.Signal) AppOption {
 	}
 }
 
+// WithEndpoints 设置服务地址
 func WithEndpoints(endpoints []*url.URL) AppOption {
 	return func(o *AppOptions) {
 		if len(endpoints) > 0 {
@@ -122,12 +127,14 @@ func WithEndpoints(endpoints []*url.URL) AppOption {
 	}
 }
 
+// WithRegistrar 设置服务注册器
 func WithRegistrar(registrar registry.ServiceRegistrar) AppOption {
 	return func(o *AppOptions) {
 		o.registrar = registrar
 	}
 }
 
+// WithMustRedis 初始化 Redis 组件（错误直接panic）
 func WithMustRedis() AppOption {
 	components[compRedis] = struct{}{}
 	return func(o *AppOptions) {
@@ -143,6 +150,7 @@ func WithMustRedis() AppOption {
 	}
 }
 
+// WithMustDB 初始化数据库组件（错误直接panic）
 func WithMustDB() AppOption {
 	components[compDB] = struct{}{}
 	return func(o *AppOptions) {
@@ -175,18 +183,32 @@ func WithServer(name string, srv func(a *AppOptions) server.Server) AppOption {
 	}
 }
 
+// WithGinServer 使用 gin server
+// srv 注册路由，添加 handler
 func WithGinServer(svr func(e *gin.Engine, a *AppOptions)) AppOption {
 	return WithServer(compHttp, func(a *AppOptions) server.Server {
 		return NewHttpServer(svr, a)
 	})
 }
 
+// WithGrpcServer 使用 grpc server
+// srv 注册业务服务（pb生成）
+// grpcServerOpts 可选的 grpc server options
 func WithGrpcServer(svr func(s *grpc.Server, a *AppOptions), grpcServerOpts ...grpc.ServerOption) AppOption {
 	return WithServer(compRpc, func(a *AppOptions) server.Server {
 		return NewRpcServer(svr, a, grpcServerOpts...)
 	})
 }
 
+// WithKafka 使用 Kafka server
+// subs 注册消息处理器
+func WithKafka(subs ...kafka.Subscriber) AppOption {
+	return WithServer(compKafka, func(a *AppOptions) server.Server {
+		return kafka.New(a.Conf().Name, a.Conf().Kafka, subs...)
+	})
+}
+
+// WithBeforeStart 在启动前执行（可以传多次）
 func WithBeforeStart(fn func(ctx context.Context) error) AppOption {
 	return func(o *AppOptions) {
 		if fn != nil {
@@ -195,6 +217,7 @@ func WithBeforeStart(fn func(ctx context.Context) error) AppOption {
 	}
 }
 
+// WithAfterStart 在启动后执行（可以传多次）
 func WithAfterStart(fn func(ctx context.Context, opts *AppOptions) error) AppOption {
 	return func(o *AppOptions) {
 		if fn != nil {
@@ -203,6 +226,7 @@ func WithAfterStart(fn func(ctx context.Context, opts *AppOptions) error) AppOpt
 	}
 }
 
+// WithBeforeStop 在停止前执行（可以传多次）
 func WithBeforeStop(fn func(ctx context.Context, opts *AppOptions) error) AppOption {
 	return func(o *AppOptions) {
 		if fn != nil {
@@ -211,6 +235,7 @@ func WithBeforeStop(fn func(ctx context.Context, opts *AppOptions) error) AppOpt
 	}
 }
 
+// WithAfterStop 在停止后执行（可以传多次）
 func WithAfterStop(fn func(ctx context.Context, opts *AppOptions) error) AppOption {
 	return func(o *AppOptions) {
 		if fn != nil {

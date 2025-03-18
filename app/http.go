@@ -36,7 +36,7 @@ func NewHttpServer(register func(e *gin.Engine, a *AppOptions), opts *AppOptions
 	}
 }
 
-func (srv *HttpServer) Get(name string) any {
+func (srv *HttpServer) Get() any {
 	return nil
 }
 

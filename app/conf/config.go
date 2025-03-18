@@ -4,6 +4,7 @@ import (
 	"github.com/bobacgo/kit/app/cache"
 	"github.com/bobacgo/kit/app/db"
 	"github.com/bobacgo/kit/app/logger"
+	"github.com/bobacgo/kit/app/mq/kafka"
 	"github.com/bobacgo/kit/app/security"
 	"github.com/bobacgo/kit/app/types"
 	"github.com/bobacgo/kit/enum"
@@ -46,6 +47,7 @@ type Basic struct {
 	DB         map[string]db.Config `mapstructure:"db"` // 支持多数据源 default key 必须存在
 	LocalCache cache.LocalCacheConf `mapstructure:"localCache" yaml:"localCache"`
 	Redis      cache.RedisConf      `mapstructure:"redis"`
+	Kafka      kafka.Config         `mapstructure:"kafka"`
 }
 
 type Transport struct {

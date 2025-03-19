@@ -3,7 +3,6 @@ package kafka
 import (
 	"context"
 	"fmt"
-	"sync"
 )
 
 // Server 实现 server.Server 接口的 Kafka 服务器
@@ -15,7 +14,6 @@ type Server struct {
 	producer *ProducerServer
 
 	// 消费者
-	consMu     sync.RWMutex
 	consumer   *consumerServer
 	handlers   map[string]*ConsumerInfo // 每个主题的处理器信息
 	consClosed chan struct{}
@@ -62,13 +60,11 @@ func (s *Server) Stop(ctx context.Context) error {
 	}
 
 	// 关闭所有消费者
-	s.consMu.Lock()
 	for _, consumer := range s.consumer.subs {
 		if consumer != nil {
 			consumer.Close()
 		}
 	}
-	s.consMu.Unlock()
 
 	// 等待消费者完全关闭
 	<-s.consClosed

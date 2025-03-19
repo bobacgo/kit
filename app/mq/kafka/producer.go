@@ -2,8 +2,9 @@ package kafka
 
 import (
 	"context"
-	"github.com/IBM/sarama"
 	"time"
+
+	"github.com/IBM/sarama"
 )
 
 type ProducerOpt func(o *ProducerOpts)
@@ -27,26 +28,42 @@ func (o ProducerOpts) h() []sarama.RecordHeader {
 	return headers
 }
 
+// WithKey 影响消息的分区（相同key在同一分区
+// 相同 key 的消息进入相同分区，保证消息顺序
+// 默认情况下，Kafka 使用 key 的 哈希值 决定消息进入哪个分区
+// 如果 key 为空，Kafka 会使用轮询（Round-Robin）方式选择分区
 func WithKey(key string) ProducerOpt {
 	return func(o *ProducerOpts) {
 		o.key = []byte(key)
 	}
 }
+
+// WithHeaders 元数据(追踪，认证等)
 func WithHeaders(headers map[string]string) ProducerOpt {
 	return func(o *ProducerOpts) {
 		o.headers = headers
 	}
 }
+
+// WithOffset 影响消息的分区唯一标识 kafka 中的消息
 func WithOffset(offset int64) ProducerOpt {
 	return func(o *ProducerOpts) {
 		o.offset = offset
 	}
 }
+
+// WithPartition 决定消息存储在那个分区
+// Kafka 存储数据的基本单位，每个 Topic 由多个 分区（Partition） 组成
+// 影响 Kafka 的并行消费（多个分区可同时被不同消费者处理）
+// 保证有序性（同一分区的消息按写入顺序消费）
 func WithPartition(partition int32) ProducerOpt {
 	return func(o *ProducerOpts) {
 		o.partition = partition
 	}
 }
+
+// WithTimestamp 消息产生时间
+// 数据恢复（回溯特定时间点的数据）
 func WithTimestamp(timestamp time.Time) ProducerOpt {
 	return func(o *ProducerOpts) {
 		o.timestamp = timestamp
@@ -110,6 +127,9 @@ func (p *ProducerServer) SendMessage(ctx context.Context, topic string, value []
 	}
 	if len(o.headers) > 0 {
 		msg.Headers = o.h()
+	}
+	if o.offset != 0 {
+		msg.Offset = o.offset
 	}
 	_, _, err := p.pub.SendMessage(msg)
 	return err

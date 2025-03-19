@@ -40,8 +40,10 @@ type consumerServer struct {
 
 func newConsumer(addrs []string, cfg ConsumerConfig, handlers map[string]*ConsumerInfo) (*consumerServer, error) {
 	config := sarama.NewConfig()
-	// config.Consumer.Group.Rebalance.GroupStrategies = sarama.NewBalanceStrategyRange()
 
+	if cfg.GroupRebalance != "" {
+		config.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{cfg.GroupRebalance.rebalance()}
+	}
 	if cfg.OffsetInitial != "" {
 		config.Consumer.Offsets.Initial = cfg.OffsetInitial.offset()
 	}
@@ -77,17 +79,24 @@ func newConsumer(addrs []string, cfg ConsumerConfig, handlers map[string]*Consum
 	}
 
 	// 创建互斥模式的消费者组
-	for groupID, topics := range mutexTopics {
-		consumer, err := sarama.NewConsumerGroup(addrs, groupID, config)
+	if len(mutexTopics) > 0 {
+		// 只需创建一个消费者组连接
+		consumer, err := sarama.NewConsumerGroup(addrs, fmt.Sprintf("%s-mutex", cfg.GroupID), config)
 		if err != nil {
 			return nil, fmt.Errorf("创建互斥模式消费者组失败: %w", err)
 		}
-		// 为每个主题关联同一个消费者组
-		for _, topic := range topics {
-			c.subs[topic] = consumer
+
+		// 收集所有互斥模式的主题
+		var allTopics []string
+		for _, topics := range mutexTopics {
+			allTopics = append(allTopics, topics...)
+			// 建立主题到消费者的映射
+			for _, topic := range topics {
+				c.subs[topic] = consumer
+			}
 		}
-		// 启动消费处理循环
-		go c.consumeLoop(topics...)
+		// 启动一个消费循环处理所有互斥主题
+		go c.consumeLoop(allTopics...)
 	}
 
 	// 创建广播模式的消费者组
@@ -97,7 +106,6 @@ func newConsumer(addrs []string, cfg ConsumerConfig, handlers map[string]*Consum
 			return nil, fmt.Errorf("创建广播模式消费者组失败: %w", err)
 		}
 		c.subs[topic] = consumer
-		// 启动消费处理循环
 		go c.consumeLoop(topic)
 	}
 

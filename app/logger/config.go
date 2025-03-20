@@ -18,7 +18,7 @@ const (
 )
 
 type Config struct {
-	Level LogLevel `mapstructure:"level" validate:"oneof=debug info error"`
+	Level LogLevel `mapstructure:"level" validate:"omitempty,oneof=debug info error"`
 	// 监听日志级别变化
 	LevelCh    chan LogLevel `mapstructure:"-" json:"-" yaml:"-"`
 	TimeFormat string        `mapstructure:"timeFormat" yaml:"timeFormat" default:"2006-01-02 15:04:05"`

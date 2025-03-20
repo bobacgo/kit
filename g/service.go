@@ -52,7 +52,7 @@ func (*UniqueService[T]) Verify(tx *gorm.DB, q map[string]any) error {
 			}
 		}
 		if len(msg) > 0 {
-			return errs.DateBusy
+			return errs.InternalError
 		}
 	}
 	return nil

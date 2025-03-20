@@ -22,22 +22,22 @@ type Status struct {
 }
 
 // New returns a Status representing c and msg.
-func New(c uint32, msg string) *Status {
+func New(c int32, msg string) *Status {
 	return &Status{Code: c, Message: msg}
 }
 
 // Newf returns New(c, fmt.Sprintf(format, a...)).
-func Newf(c uint32, format string, a ...any) *Status {
+func Newf(c int32, format string, a ...any) *Status {
 	return New(c, fmt.Sprintf(format, a...))
 }
 
 // Err returns an error representing c and msg.  If c is OK, returns nil.
-func Err(c uint32, msg string) error {
+func Err(c int32, msg string) error {
 	return New(c, msg).Err()
 }
 
 // Errf returns Err(c, fmt.Sprintf(format, a...)).
-func Errf(c uint32, format string, a ...interface{}) error {
+func Errf(c int32, format string, a ...interface{}) error {
 	return Err(c, fmt.Sprintf(format, a...))
 }
 

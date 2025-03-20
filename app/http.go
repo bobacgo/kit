@@ -12,7 +12,9 @@ import (
 
 	"github.com/bobacgo/kit/app/conf"
 	"github.com/bobacgo/kit/app/server"
+	"github.com/bobacgo/kit/app/validator"
 	"github.com/bobacgo/kit/enum"
+	pkgvalidator "github.com/go-playground/validator/v10"
 	"github.com/pkg/errors"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -20,6 +22,7 @@ import (
 	"github.com/bobacgo/kit/app/server/http/middleware"
 	"github.com/bobacgo/kit/web/r"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 type HttpServer struct {
@@ -54,6 +57,12 @@ func (srv *HttpServer) Start(ctx context.Context) error {
 
 	e := gin.New()
 	e.ContextWithFallback = true // 兼容 gin.Context.Get()
+
+	// 扩展 validator 功能
+	valid, ok := binding.Validator.Engine().(*pkgvalidator.Validate)
+	if ok {
+		*valid = *validator.Get()
+	}
 
 	e.Use(gin.Logger())
 	e.Use(middleware.Recovery())

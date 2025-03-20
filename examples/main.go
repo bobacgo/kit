@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
+	"log/slog"
+
 	kserver "github.com/bobacgo/kit/app/server"
 	"github.com/bobacgo/kit/examples/internal/config"
 	"github.com/bobacgo/kit/examples/internal/server"
-	"log"
-	"log/slog"
 
 	_ "github.com/bobacgo/kit/examples/docs"
 
@@ -33,7 +34,7 @@ func main() {
 		// app.WithMustRedis(),
 		// app.WithKafka(),
 		app.WithGinServer(router.Register),
-		app.WithGrpcServer(nil),
+		app.WithGrpcServer(server.GrpcRegisterServer),
 		app.WithServer(server.JobServerName, func(a *app.AppOptions) kserver.Server {
 			return new(server.JobServer)
 		}),

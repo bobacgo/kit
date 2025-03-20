@@ -1,6 +1,8 @@
 package handler
 
 import (
+	v1 "github.com/bobacgo/kit/examples/api/admin/v1"
+	"github.com/bobacgo/kit/web/r"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,10 +20,19 @@ func NewUserHandler() *UserHandler {
 // @Tags 用户
 // @Accept application/json
 // @Produce application/json
+// @Param language header string false "language（可选）"
+// @Param req body v1.UserPageListReq true "请求参数"
 // @Success 200 {object} []v1.UserPageListResp "查询成功"
 // @Router /v1/user/pageList [post]
 func (u *UserHandler) PageList(c *gin.Context) {
-	panic("implement me")
+	lang := c.GetHeader("language")
+	c.Set("language", lang)
+	req := &v1.UserPageListReq{}
+	if err := c.ShouldBind(req); err != nil {
+		r.Reply(c, err)
+		return
+	}
+	r.Reply(c, nil)
 }
 
 func (u *UserHandler) Get(c *gin.Context) {

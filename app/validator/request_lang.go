@@ -11,6 +11,10 @@ func SetLanguageCtxKey(key string) {
 	languageCtxKey = key
 }
 
+func GetLanguageCtxKey() string {
+	return languageCtxKey
+}
+
 type GetRequestLanguageFunc func(ctx context.Context) string
 
 // DefaultGetLanguage 重新赋值修改默认获取语言的方法

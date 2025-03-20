@@ -79,9 +79,11 @@ func (srv *RpcServer) defaultInterceptor() {
 		grpc.ChainUnaryInterceptor( // 单向拦截器
 			logging.UnaryServerInterceptor(interceptor.Logger(), logging.WithFieldsFromContext(interceptor.LogTraceID)),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(interceptor.Recovery)),
+			interceptor.ValidateParam(), // 参数校验
 		), grpc.ChainStreamInterceptor( // 流式拦截器
 			logging.StreamServerInterceptor(interceptor.Logger(), logging.WithFieldsFromContext(interceptor.LogTraceID)),
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandler(interceptor.Recovery)),
+			// interceptor.ValidateStreamParam(), // 对接收到的消息进行校验
 		))
 	srv.grpcServerOpts = append(defaultOpts, srv.grpcServerOpts...)
 }

@@ -28,6 +28,23 @@ const docTemplate = `{
                     "用户"
                 ],
                 "summary": "用户管理",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "language（可选）",
+                        "name": "language",
+                        "in": "header"
+                    },
+                    {
+                        "description": "请求参数",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.UserPageListReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "查询成功",
@@ -43,6 +60,24 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "v1.UserPageListReq": {
+            "type": "object",
+            "required": [
+                "page",
+                "page_size"
+            ],
+            "properties": {
+                "keyword": {
+                    "type": "string"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                }
+            }
+        },
         "v1.UserPageListResp": {
             "type": "object",
             "properties": {

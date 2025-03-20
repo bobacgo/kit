@@ -39,6 +39,13 @@ func StructCtx(ctx context.Context, obj any) error {
 	return nil
 }
 
+func StructLocale(locale string, obj any) error {
+	if err := validate.Struct(obj); err != nil {
+		return TransErrLocale(locale, err)
+	}
+	return nil
+}
+
 // TransErrZh 解析错误信息为中文
 func TransErrZh(err error) error {
 	return TransErrLocale("zh", err)

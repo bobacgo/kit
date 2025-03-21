@@ -55,7 +55,7 @@ func (srv *RpcServer) Start(ctx context.Context) error {
 	}
 
 	localhost, _ := getRegistryUrl("grpc", cfg.Server.Rpc.Addr)
-	slog.Info("grpc server running " + localhost)
+	slog.Info("[rpc] grpc server running " + localhost)
 	go func(lis net.Listener) {
 		if err := srv.server.Serve(lis); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			log.Panicf("listen: %s\n", err)
@@ -69,7 +69,7 @@ func (srv *RpcServer) Stop(ctx context.Context) error {
 		return nil
 	}
 
-	slog.Info("Shutting down grpc server...")
+	slog.Info("[rpc] Shutting down grpc server...")
 	srv.server.GracefulStop() // 优雅停止
 	return nil
 }

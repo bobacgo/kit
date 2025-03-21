@@ -124,19 +124,19 @@ func (srv *consumerServer) consumeLoop(topics ...string) {
 
 		// 消费消息
 		if err := consumer.Consume(context.Background(), topics, srv); err != nil {
-			slog.Error("消费消息出错", "topics", topics, "error", err)
+			slog.Error("[kafka] 消费消息出错", "topics", topics, "error", err)
 		}
 	}
 }
 
 // 实现 sarama.ConsumerGroupHandler 接口
 func (srv *consumerServer) Setup(session sarama.ConsumerGroupSession) error {
-	slog.Info("正在监听:", "topics", session.Claims())
+	slog.Info("[kafka] 正在监听:", "topics", session.Claims())
 	return nil
 }
 
 func (srv *consumerServer) Cleanup(session sarama.ConsumerGroupSession) error {
-	slog.Info("取消监听:", "topics", session.Claims(), "member_id", session.MemberID())
+	slog.Info("[kafka] 取消监听:", "topics", session.Claims(), "member_id", session.MemberID())
 	return nil
 }
 

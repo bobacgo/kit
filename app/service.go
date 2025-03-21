@@ -20,9 +20,8 @@ import (
 	"github.com/bobacgo/kit/app/cache"
 	"github.com/bobacgo/kit/app/conf"
 	"github.com/bobacgo/kit/app/server"
-	"github.com/bobacgo/kit/app/types"
 	"github.com/fsnotify/fsnotify"
-	"github.com/pkg/errors"
+
 	"golang.org/x/exp/maps"
 
 	"github.com/bobacgo/kit/app/registry"
@@ -41,22 +40,22 @@ type App struct {
 }
 
 func New[T any](configPath string, opts ...AppOption) *App {
-	// 加载配置
+	// 1. 加载配置
 	cfg, err := conf.LoadApp[T](configPath, func(e fsnotify.Event) {
 		logger.SetLevel(conf.GetBasicConf().Logger.Level)
-		slog.Warn("config onchange", "name", e.Name, "op", e.Op)
+		slog.Warn("[config] config onchange", "name", e.Name, "op", e.Op)
 	})
 	if err != nil {
 		log.Panic(err)
 	}
-	// 初始化日志配置
-	cfg.Logger = newLogger(cfg.Name, cfg.Logger)
+	// 2. 初始化日志, 并更新配置
+	cfg.Logger = logger.New(cfg.Name, cfg.Logger)
 
 	// 提供一个脱敏标签(mask)的配置文件
 	// 扫描标签 并用 ** 替换
 	maskConf := tag.Desensitize(cfg)
 	cfgData, _ := yaml.Marshal(maskConf)
-	slog.Info("local config info\n" + string(cfgData))
+	slog.Info("[server] local config info\n" + string(cfgData))
 
 	slog.Info(fmt.Sprintf(initDoneFmt, "config"))
 	slog.Info(fmt.Sprintf(initDoneFmt, "logger"))
@@ -69,10 +68,16 @@ func New[T any](configPath string, opts ...AppOption) *App {
 		wg:      wg,
 		servers: make(map[string]server.Server),
 	}
+
+	// 3. 初始化本地缓存组件
 	wg.Go(func() error {
 		var err error
-		o.localCache, err = newLocalCache(o.conf.LocalCache.MaxSize)
-		return err
+		if o.localCache, err = cache.NewFreeCache(o.conf.LocalCache.MaxSize); err != nil {
+			return fmt.Errorf("init local cache failed: %w", err)
+		}
+		components[compCache] = struct{}{}
+		slog.Info(fmt.Sprintf(initDoneFmt, compCache))
+		return nil
 	})
 	for _, opt := range opts {
 		opt(&o)
@@ -112,7 +117,7 @@ func (a *App) Run() error {
 	for k, srv := range a.servers {
 		a.wg.Go(func() error {
 			if err := srv.Start(ctx); err != nil {
-				return errors.Wrapf(err, "start %s error", k)
+				return fmt.Errorf("start %s error: %w", k, err)
 			}
 			slog.Info(fmt.Sprintf(initDoneFmt, k))
 			return nil
@@ -120,7 +125,7 @@ func (a *App) Run() error {
 	}
 
 	if err = a.wg.Wait(); err != nil { // 等待所有 server 启动完成
-		return errors.Wrap(err, "start servers failed")
+		return fmt.Errorf("start servers failed: %w", err)
 	}
 
 	if a.registrar != nil {
@@ -130,13 +135,13 @@ func (a *App) Run() error {
 			defer cancel()
 		}
 		if err := a.registrar.Registry(ctx, instance); err != nil {
-			return errors.Wrap(err, "register service failed")
+			return fmt.Errorf("register service failed: %w", err)
 		}
 	}
 
-	slog.Info("server started")
-	slog.Info("app info", "ID", a.AppID(), "name", a.Conf().Name, "version", a.Conf().Version)
-	slog.Info(fmt.Sprintf("use components list %q\n", maps.Keys(components)))
+	slog.Info("[server] server started")
+	slog.Info("[server] app info", "ID", a.AppID(), "name", a.Conf().Name, "version", a.Conf().Version)
+	slog.Info(fmt.Sprintf("[server] use components list %q\n", maps.Keys(components)))
 
 	for _, fn := range a.afterStart {
 		if err := fn(ctx, &a.AppOptions); err != nil {
@@ -151,7 +156,7 @@ func (a *App) Run() error {
 	if err = a.shutdown(ctx); err != nil {
 		return err
 	}
-	slog.Info("service has exited")
+	slog.Info("[server] service has exited")
 	return nil
 }
 
@@ -182,7 +187,7 @@ func (a *App) shutdown(ctx context.Context) error {
 		ctx, cancel := context.WithTimeout(ctx, duration.TimeDuration())
 		defer cancel()
 		if err := a.registrar.Deregister(ctx, instance); err != nil {
-			return errors.Wrap(err, "deregister service error")
+			return fmt.Errorf("deregister service error: %w", err)
 		}
 	}
 
@@ -191,9 +196,9 @@ func (a *App) shutdown(ctx context.Context) error {
 	for k, srv := range a.servers {
 		a.wg.Go(func() error {
 			if err := srv.Stop(ctx); err != nil { // 出错也不能影响其他服务的停止
-				slog.Error("stop server error", k, err)
+				slog.Error("[server] stop server error", k, err)
 			} else {
-				slog.Info("stop " + k + " service success")
+				slog.Info("[server] stop " + k + " service success")
 			}
 			return nil
 		})
@@ -231,14 +236,14 @@ func (a *App) buildInstance() (*registry.ServiceInstance, error) {
 		if rUrl, err := getRegistryUrl("http", serverCfg.Http.Addr); err == nil {
 			endpoints = append(endpoints, rUrl)
 		} else {
-			slog.Error("get http registry err", "err", err)
+			slog.Error("[server] get http registry err", "err", err)
 		}
 	}
 	if !grpcScheme && serverCfg.Rpc.Addr != "" {
 		if rUrl, err := getRegistryUrl("grpc", serverCfg.Rpc.Addr); err == nil {
 			endpoints = append(endpoints, rUrl)
 		} else {
-			slog.Error("get grpc registry err", "err", err)
+			slog.Error("[server] get grpc registry err", "err", err)
 		}
 	}
 	return &registry.ServiceInstance{
@@ -248,61 +253,6 @@ func (a *App) buildInstance() (*registry.ServiceInstance, error) {
 		Metadata:  nil,
 		Endpoints: endpoints,
 	}, nil
-}
-
-func newLogger(appName string, logCfg logger.Config) logger.Config {
-	if logCfg.Level == "" {
-		logCfg.Level = logger.LogLevel_Info
-	}
-	opts := []logger.Option{
-		logger.WithLevel(logCfg.Level),
-	}
-	if logCfg.TimeFormat != "" {
-		opts = append(opts, logger.WithTimeFormat(logCfg.TimeFormat))
-	}
-	if appName != "" {
-		opts = append(opts, logger.WithFilename(appName))
-	}
-	if logCfg.Filepath != "" {
-		opts = append(opts, logger.WithFilepath(logCfg.Filepath))
-	}
-	if logCfg.FilenameSuffix != "" {
-		opts = append(opts, logger.WithFilenameSuffix(logCfg.FilenameSuffix))
-	}
-	if logCfg.FileExtension != "" {
-		opts = append(opts, logger.WithFileExtension(logCfg.FileExtension))
-	}
-	if logCfg.FileMaxSize > 0 {
-		opts = append(opts, logger.WithFileMaxSize(logCfg.FileMaxSize))
-	}
-	if logCfg.FileMaxAge > 0 {
-		opts = append(opts, logger.WithFileMaxAge(logCfg.FileMaxAge))
-	}
-	if logCfg.FileJsonEncoder {
-		opts = append(opts, logger.WithFileJsonEncoder(logCfg.FileJsonEncoder))
-	}
-	if logCfg.FileCompress {
-		opts = append(opts, logger.WithFileCompress(logCfg.FileCompress))
-	}
-
-	cfg := logger.NewConfig(opts...)
-	// 初始化日志配置
-	logger.InitZapLogger(cfg)
-	return cfg
-}
-
-func newLocalCache(limit types.ByteSize) (cache.Cache, error) {
-	if limit == "" {
-		return cache.DefaultCache(), nil // 没有指定大小就使用默认的 512MB
-	}
-	localCache, err := cache.NewFreeCache(limit)
-	if err != nil {
-		return nil, errors.Wrap(err, "init local cache failed")
-	}
-	slog.Info(fmt.Sprintf(initDoneFmt, compCache))
-
-	components[compCache] = struct{}{}
-	return localCache, nil
 }
 
 func getRegistryUrl(scheme, addr string) (string, error) {

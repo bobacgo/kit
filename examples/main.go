@@ -9,6 +9,7 @@ import (
 	kserver "github.com/bobacgo/kit/app/server"
 	"github.com/bobacgo/kit/examples/internal/config"
 	"github.com/bobacgo/kit/examples/internal/server"
+	"gorm.io/driver/sqlite"
 
 	_ "github.com/bobacgo/kit/examples/docs"
 
@@ -30,7 +31,7 @@ func init() {
 //go:generate swag init --parseDependency --parseInternal --dir ./ --output ./docs
 func main() {
 	newApp := app.New[config.Service](*filepath,
-		// app.WithMustDB(),
+		app.WithMustDB(sqlite.Open),
 		// app.WithMustRedis(),
 		// app.WithKafka(),
 		app.WithGinServer(router.Register),

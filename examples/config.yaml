@@ -24,12 +24,16 @@ localCache:
   maxSize: 512MB
 db:
   default:
+    driver: mysql
     dryRun: false # 是否空跑 (用于调试,数据不会写入数据库)
-    source: admin:root@tcp(127.0.0.1:3306)/mall-ums?charset=utf8mb4&parseTime=True&loc=Local
+    source: root:123456@tcp(127.0.0.1:3306)/ai_shop_user?charset=utf8mb4&parseTime=True&loc=Local
     slowThreshold: 1
     maxLifeTime: 1
     maxOpenConn: 100
     maxIdleConn: 30
+  sqlite:
+    driver: sqlite
+    source: ./data.db
 kafka:
   addrs:
     - '127.0.0.1:9092'

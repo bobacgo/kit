@@ -10,12 +10,13 @@ import (
 	"net/http/pprof"
 	"strings"
 
+	"errors"
+
 	"github.com/bobacgo/kit/app/conf"
 	"github.com/bobacgo/kit/app/server"
 	"github.com/bobacgo/kit/app/validator"
 	"github.com/bobacgo/kit/enum"
 	pkgvalidator "github.com/go-playground/validator/v10"
-	"github.com/pkg/errors"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
@@ -88,8 +89,8 @@ func (srv *HttpServer) Start(ctx context.Context) error {
 	srv.server = &http.Server{Handler: e}
 
 	localhost, _ := getRegistryUrl("http", cfg.Server.Http.Addr)
-	slog.Info("http server running " + localhost)
-	slog.Info("API docs " + localhost + "/swagger/index.html")
+	slog.Info("[http] http server running " + localhost)
+	slog.Info("[http] API docs " + localhost + "/swagger/index.html")
 	go func(lit net.Listener) {
 		if err := srv.server.Serve(lit); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Panicf("listen: %s\n", err)
@@ -102,7 +103,7 @@ func (srv *HttpServer) Stop(ctx context.Context) error {
 	if srv.server == nil {
 		return nil
 	}
-	slog.Info("Shutting down http server...")
+	slog.Info("[http] Shutting down http server...")
 	return srv.server.Shutdown(ctx)
 }
 

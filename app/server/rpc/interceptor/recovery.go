@@ -9,6 +9,6 @@ import (
 )
 
 func Recovery(p any) error {
-	slog.Error("recovered from panic", "panic", p, "stack", debug.Stack())
+	slog.Error("[interceptor] recovered from panic", "panic", p, "stack", debug.Stack())
 	return status.Errorf(codes.Internal, "%s", p)
 }

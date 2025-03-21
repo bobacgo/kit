@@ -150,3 +150,44 @@ func (c *Config) Validate() []error {
 func (c *Config) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&c.Filename, "log-filename", c.Filename, "log filename")
 }
+
+func New(appName string, logCfg Config) Config {
+	if logCfg.Level == "" {
+		logCfg.Level = LogLevel_Info
+	}
+	opts := []Option{
+		WithLevel(logCfg.Level),
+	}
+	if logCfg.TimeFormat != "" {
+		opts = append(opts, WithTimeFormat(logCfg.TimeFormat))
+	}
+	if appName != "" {
+		opts = append(opts, WithFilename(appName))
+	}
+	if logCfg.Filepath != "" {
+		opts = append(opts, WithFilepath(logCfg.Filepath))
+	}
+	if logCfg.FilenameSuffix != "" {
+		opts = append(opts, WithFilenameSuffix(logCfg.FilenameSuffix))
+	}
+	if logCfg.FileExtension != "" {
+		opts = append(opts, WithFileExtension(logCfg.FileExtension))
+	}
+	if logCfg.FileMaxSize > 0 {
+		opts = append(opts, WithFileMaxSize(logCfg.FileMaxSize))
+	}
+	if logCfg.FileMaxAge > 0 {
+		opts = append(opts, WithFileMaxAge(logCfg.FileMaxAge))
+	}
+	if logCfg.FileJsonEncoder {
+		opts = append(opts, WithFileJsonEncoder(logCfg.FileJsonEncoder))
+	}
+	if logCfg.FileCompress {
+		opts = append(opts, WithFileCompress(logCfg.FileCompress))
+	}
+
+	cfg := NewConfig(opts...)
+	// 初始化日志配置
+	InitZapLogger(cfg)
+	return cfg
+}

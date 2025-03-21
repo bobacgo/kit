@@ -9,7 +9,6 @@ import (
 
 	"github.com/bobacgo/kit/app/mq/kafka"
 	"github.com/bobacgo/kit/app/server"
-	"github.com/pkg/errors"
 
 	"golang.org/x/sync/errgroup"
 
@@ -20,13 +19,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
-	"gorm.io/driver/mysql"
 )
 
 const (
-	compCache = "local_cache"
+	compCache = "cache"
 	compRedis = "redis"
-	compDB    = "db"
 	compHttp  = "http"
 	compRpc   = "rpc"
 	compKafka = "kafka"
@@ -140,9 +137,8 @@ func WithMustRedis() AppOption {
 	return func(o *AppOptions) {
 		o.wg.Go(func() error {
 			var err error
-			o.redis, err = cache.NewRedis(o.conf.Redis)
-			if err != nil {
-				return errors.Wrap(err, "init redis failed")
+			if o.redis, err = cache.NewRedis(o.conf.Redis); err != nil {
+				return fmt.Errorf("init redis failed: %w", err)
 			}
 			slog.Info(fmt.Sprintf(initDoneFmt, compRedis))
 			return nil
@@ -151,23 +147,18 @@ func WithMustRedis() AppOption {
 }
 
 // WithMustDB 初始化数据库组件（错误直接panic）
-func WithMustDB() AppOption {
-	components[compDB] = struct{}{}
+// GORM 官方支持的数据库类型有
+// MySQL, PostgreSQL, SQLite, SQL Server 和 TiDB
+func WithMustDB(drivers ...db.DriverOpenFunc) AppOption {
+	components[db.ComponentName] = struct{}{}
 	return func(o *AppOptions) {
 		o.wg.Go(func() error {
-			smMap := make(map[string]db.InstanceConfig, len(o.conf.DB))
-			for k, c := range o.conf.DB {
-				smMap[k] = db.InstanceConfig{
-					Driver: mysql.Open(c.Source), // TODO 支持其他数据库类型
-					Config: c,
-				}
-			}
 			var err error
-			o.db, err = db.NewDBManager(smMap)
-			if err != nil {
-				return errors.Wrap(err, "init db manager failed")
+			dmap := db.DialectorMap(drivers, o.conf.DB)
+			if o.db, err = db.NewDBManager(dmap); err != nil {
+				return fmt.Errorf("init db manager failed: %w", err)
 			}
-			slog.Info(fmt.Sprintf(initDoneFmt, compDB))
+			slog.Info(fmt.Sprintf(initDoneFmt, db.ComponentName))
 			return nil
 		})
 	}

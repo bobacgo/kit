@@ -35,7 +35,7 @@ func LoggerResponseFail() gin.HandlerFunc {
 			return
 		}
 		if rsp.Code != codes.OK {
-			slog.ErrorContext(c, fmt.Sprintf("\nrequest: %s\nresponse: %s", reqBody, rspBody))
+			slog.ErrorContext(c, fmt.Sprintf("\n[middleware] request: %s\n[middleware] response: %s", reqBody, rspBody))
 		}
 	}
 }

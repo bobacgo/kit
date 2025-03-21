@@ -2,7 +2,6 @@ package cache
 
 import (
 	"encoding/json"
-	"sync"
 	"time"
 
 	"github.com/bobacgo/kit/app/types"
@@ -10,13 +9,15 @@ import (
 )
 
 type freeCache struct {
-	mu    sync.Mutex
 	cache *freecache.Cache
 }
 
 var _ Cache = (*freeCache)(nil)
 
 func NewFreeCache(maxMemorySize types.ByteSize) (Cache, error) {
+	if maxMemorySize == "" {
+		return DefaultCache(), nil
+	}
 	size, err := maxMemorySize.ToInt()
 	if err != nil {
 		return nil, err

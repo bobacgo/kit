@@ -3,9 +3,10 @@ package conf
 import (
 	"flag"
 	"fmt"
-	"github.com/bobacgo/kit/pkg/tag"
 	"log/slog"
 	"sync/atomic"
+
+	"github.com/bobacgo/kit/pkg/tag"
 
 	"github.com/bobacgo/kit/app/validator"
 	"github.com/fsnotify/fsnotify"
@@ -70,7 +71,7 @@ func LoadApp[T any](filepath string, onChange func(e fsnotify.Event)) (*App[T], 
 		}
 	}
 	if err := validator.Struct(cfg); err != nil {
-		return nil, fmt.Errorf("validate config error: %w\n", err)
+		return nil, fmt.Errorf("validate config error: %w", err)
 	}
 	cfg = tag.Default(cfg) // 带有默认值 tag 标签赋值
 	SetApp(cfg)
@@ -80,7 +81,7 @@ func LoadApp[T any](filepath string, onChange func(e fsnotify.Event)) (*App[T], 
 func reload[T any](path string, onChange func(e fsnotify.Event)) func(e fsnotify.Event) {
 	return func(e fsnotify.Event) {
 		if _, err := LoadApp[T](path, nil); err != nil {
-			slog.Error("reload config error", "err", err)
+			slog.Error("[config] reload config error", "err", err)
 			return
 		}
 		if onChange != nil {

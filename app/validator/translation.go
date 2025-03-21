@@ -43,7 +43,7 @@ func registerTrans(validate *validator.Validate, multipleTrans ...TranslationLan
 	for t, register := range tMap {
 		lt, _ := trans.GetTranslator(t.Locale())
 		if err := register(validate, lt); err != nil { // 注册多语言翻译器
-			slog.Error("registerTrans", t.Locale(), err)
+			slog.Error("[validator] registerTrans", t.Locale(), err)
 		}
 	}
 }

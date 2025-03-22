@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bobacgo/kit/app/cache"
 	"github.com/bobacgo/kit/app/types"
 	"github.com/bobacgo/kit/pkg/uid"
 	"github.com/golang-jwt/jwt/v5"
@@ -21,21 +22,21 @@ const (
 
 type JWToken struct {
 	cfg   JwtConfig
-	cache redis.Cmdable
+	rdb   redis.Cmdable
+	cache cache.Cache
 }
 
-// TODO 实现本地存储
-// func NewJWTLocal(conf *JwtConfig) *JWToken {
-// 	jwt := &JWToken{cfg: *conf}
-// 	jwt.init()
-// 	return jwt
-// }
+func NewJWTLocal(conf *JwtConfig, cache cache.Cache) *JWToken {
+	jwt := &JWToken{cfg: *conf, cache: cache}
+	jwt.init()
+	return jwt
+}
 
 func NewJWT(conf *JwtConfig, rdb redis.Cmdable) *JWToken {
 	if conf.CacheKeyPrefix == "" {
 		conf.CacheKeyPrefix = CacheKeyPrefix
 	}
-	jwt := &JWToken{cfg: *conf, cache: rdb}
+	jwt := &JWToken{cfg: *conf, rdb: rdb}
 	jwt.init()
 	return jwt
 }
@@ -78,14 +79,6 @@ func (t *JWToken) Generate(ctx context.Context, claims *Claims) (atoken, rtoken 
 
 	err = t.cacheToken(ctx, claims.Subject, claims.ID, atoken)
 	return
-}
-
-func (t *JWToken) cacheToken(ctx context.Context, subject, tokenID, token string) error {
-	value := fmt.Sprintf("%s|%s", tokenID, token)
-	if t.cache == nil {
-		return nil
-	}
-	return t.cache.Set(ctx, t.key(subject), value, t.cfg.AccessTokenExpired.TimeDuration()).Err()
 }
 
 func (t *JWToken) keyfunc(_ *jwt.Token) (any, error) {
@@ -132,22 +125,49 @@ func (t *JWToken) GetTokenID(ctx context.Context, subject string) (string, error
 
 // RemoveToken 删除 token
 func (t *JWToken) RemoveToken(ctx context.Context, subject string) error {
-	if t.cache == nil {
+	switch {
+	case t.rdb != nil:
+		return t.rdb.Del(ctx, t.key(subject)).Err()
+	case t.cache != nil:
+		t.cache.Del(t.key(subject))
 		return nil
+	default:
+		return errors.New("cache not init")
 	}
-	return t.cache.Del(ctx, t.key(subject)).Err()
 }
 
 func (t *JWToken) getToken(ctx context.Context, subject string) ([]string, error) {
-	if t.cache == nil {
-		return nil, errors.New("token not cache")
+	var (
+		tokenStr string
+		err      error
+	)
+	switch {
+	case t.rdb != nil:
+		if tokenStr, err = t.rdb.Get(ctx, t.key(subject)).Result(); err != nil {
+			return nil, err
+		}
+	case t.cache != nil:
+		if err = t.cache.Get(t.key(subject), &tokenStr); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, errors.New("cache not init")
 	}
-	tokenStr, err := t.cache.Get(ctx, t.key(subject)).Result()
-	if err != nil {
-		return nil, err
-	}
+
 	// 拆分 tokenID 和 token (tokenID|token)
 	return strings.SplitN(tokenStr, "|", 2), nil
+}
+
+func (t *JWToken) cacheToken(ctx context.Context, subject, tokenID, token string) error {
+	value := fmt.Sprintf("%s|%s", tokenID, token)
+	switch {
+	case t.rdb != nil:
+		return t.rdb.Set(ctx, t.key(subject), value, t.cfg.AccessTokenExpired.TimeDuration()).Err()
+	case t.cache != nil:
+		return t.cache.Set(t.key(subject), value, t.cfg.AccessTokenExpired.TimeDuration())
+	default:
+		return errors.New("cache not init")
+	}
 }
 
 func (t *JWToken) key(subject string) string {

@@ -42,12 +42,12 @@ type Basic struct {
 		Http Transport `mapstructure:"http"`
 		Rpc  Transport `mapstructure:"rpc"` // rpc 端口号没有指定,就是http端口号+1000
 	} `mapstructure:"server"`
-	Security   security.Config      `mapstructure:"security"`
-	Logger     logger.Config        `mapstructure:"logger"`
-	DB         map[string]db.Config `mapstructure:"db"` // 支持多数据源 default key 必须存在
-	LocalCache cache.LocalCacheConf `mapstructure:"localCache" yaml:"localCache"`
-	Redis      cache.RedisConf      `mapstructure:"redis"`
-	Kafka      kafka.Config         `mapstructure:"kafka"`
+	Security   security.Config            `mapstructure:"security"`
+	Logger     logger.Config              `mapstructure:"logger"`
+	DB         map[string]db.Config       `mapstructure:"db"` // 支持多数据源 default key 必须存在
+	LocalCache cache.LocalCacheConf       `mapstructure:"localCache" yaml:"localCache"`
+	Redis      map[string]cache.RedisConf `mapstructure:"redis"` // 支持多数据源 default key 必须存在
+	Kafka      kafka.Config               `mapstructure:"kafka"`
 }
 
 type Transport struct {

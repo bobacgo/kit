@@ -17,7 +17,6 @@ import (
 	"github.com/bobacgo/kit/app/db"
 	"github.com/bobacgo/kit/app/registry"
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 )
 
@@ -44,8 +43,8 @@ type AppOptions struct {
 	wg *errgroup.Group // 用于并发初始化组件
 	// 内置功能
 	localCache cache.Cache
-	redis      redis.UniversalClient
-	db         *db.DBManager
+	redis      cache.RedisManager
+	db         db.DBManager
 
 	// hook func
 	beforeStart                       []func(ctx context.Context) error
@@ -78,13 +77,13 @@ func (o *AppOptions) LocalCache() cache.Cache {
 
 // DB 获取数据库连接
 // DB gorm 关系型数据库 -- 持久化
-func (o *AppOptions) DB() *db.DBManager {
+func (o *AppOptions) DB() db.DBManager {
 	return o.db
 }
 
 // Redis 获取redis client
 // CacheDB 二级缓存 容量大，有网络IO延迟
-func (o *AppOptions) Redis() redis.UniversalClient {
+func (o *AppOptions) Redis() cache.RedisManager {
 	return o.redis
 }
 
@@ -137,7 +136,7 @@ func WithMustRedis() AppOption {
 	return func(o *AppOptions) {
 		o.wg.Go(func() error {
 			var err error
-			if o.redis, err = cache.NewRedis(o.conf.Redis); err != nil {
+			if o.redis, err = cache.NewDBManager(o.conf.Redis); err != nil {
 				return fmt.Errorf("init redis failed: %w", err)
 			}
 			slog.Info(fmt.Sprintf(initDoneFmt, compRedis))

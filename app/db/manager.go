@@ -19,34 +19,29 @@ func withPrefix(prefix, format string, msgs ...any) string {
 const defaultInstanceKey = "default"
 
 // 多数据源管理
-type DBManager struct {
-	sources map[string]*gorm.DB
-}
+type DBManager map[string]*gorm.DB
 
-func NewDBManager(cfgKV map[string]DialectorConfig) (*DBManager, error) {
-	dbs := make(map[string]*gorm.DB)
+func NewDBManager(cfgKV map[string]DialectorConfig) (DBManager, error) {
+	if _, ok := cfgKV[defaultInstanceKey]; !ok {
+		return nil, fmt.Errorf("not found default instance, must be has default")
+	}
+	dbs := make(DBManager, len(cfgKV))
 	for k, cfg := range cfgKV {
-		db, err := NewDB(cfg.Dialector, cfg.Config)
-		if err != nil {
+		var err error
+		if dbs[k], err = NewDB(cfg.Dialector, cfg.Config); err != nil {
 			return nil, fmt.Errorf("k = %s , init err: %v", k, err)
 		}
-		dbs[k] = db
-
 	}
-
 	slog.Info(withPrefix(ComponentName, "instances object %+q", maps.Keys(dbs)))
-
-	return &DBManager{
-		sources: dbs,
-	}, nil
+	return dbs, nil
 }
 
-func (m *DBManager) Default() *gorm.DB {
-	return m.sources[defaultInstanceKey]
+func (m DBManager) Default() *gorm.DB {
+	return m[defaultInstanceKey]
 }
 
-func (m *DBManager) Get(k string) *gorm.DB {
-	return m.sources[k]
+func (m DBManager) Get(k string) *gorm.DB {
+	return m[k]
 }
 
 type DialectorConfig struct {

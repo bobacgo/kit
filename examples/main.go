@@ -32,7 +32,7 @@ func init() {
 func main() {
 	newApp := app.New[config.Service](*filepath,
 		app.WithMustDB(sqlite.Open),
-		// app.WithMustRedis(),
+		app.WithMustRedis(),
 		// app.WithKafka(),
 		app.WithGinServer(router.Register),
 		app.WithGrpcServer(server.GrpcRegisterServer),

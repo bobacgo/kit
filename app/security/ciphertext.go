@@ -12,6 +12,7 @@ import "github.com/bobacgo/kit/pkg/ucrypto"
 // 4.入库时hash不可逆编码(可以加盐)
 type Ciphertext string
 
+// Encrypt 加密 (可以反解密)
 func (ct *Ciphertext) Encrypt(secret string) error {
 	pt, err := ucrypto.AESEncrypt(string(*ct), secret)
 	if err != nil {
@@ -21,6 +22,7 @@ func (ct *Ciphertext) Encrypt(secret string) error {
 	return nil
 }
 
+// Decrypt 解密 (解出来的是原文)
 func (ct *Ciphertext) Decrypt(secret string) error {
 	pt, err := ucrypto.AESDecrypt(string(*ct), secret)
 	if err != nil {
@@ -30,11 +32,12 @@ func (ct *Ciphertext) Decrypt(secret string) error {
 	return nil
 }
 
+// BcryptHash 密码加密
 func (ct *Ciphertext) BcryptHash() string {
-	hash := DefaultPasswdVerifier.BcryptHash(string(*ct))
-	return hash
+	return processPwd(string(*ct))
 }
 
+// BcryptVerify 验证密码
 func (ct *Ciphertext) BcryptVerify(hashPasswd string) bool {
-	return DefaultPasswdVerifier.BcryptVerify(hashPasswd, string(*ct))
+	return verifyPwd(hashPasswd, string(*ct))
 }

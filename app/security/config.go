@@ -15,12 +15,13 @@ type CiphertextConfig struct {
 }
 
 type JwtConfig struct {
-	Secret              Ciphertext     `mapstructure:"secret" mask:""`                                                                    // jwt secret
+	Secret         Ciphertext `mapstructure:"secret" mask:""`
+	CacheKeyPrefix string     `mapstructure:"cacheKeyPrefix" yaml:"cacheKeyPrefix"` // jwt cache key prefix 分布式共享token
+	// Claims jwt claims
+	Audience            []string       `mapstructure:"audience"`                                                                          // jwt audience
 	Issuer              string         `mapstructure:"issuer"`                                                                            // jwt issuer
 	AccessTokenExpired  types.Duration `mapstructure:"accessTokenExpired" yaml:"accessTokenExpired" validate:"duration" default:"2h"`     // jwt access token expired
 	RefreshTokenExpired types.Duration `mapstructure:"refreshTokenExpired" yaml:"refreshTokenExpired" validate:"duration" default:"720h"` // jwt refresh token expired
-	// 分布式共享token
-	CacheKeyPrefix string `mapstructure:"cacheKeyPrefix" yaml:"cacheKeyPrefix"` // jwt cache key prefix
 }
 
 // TODO validate config

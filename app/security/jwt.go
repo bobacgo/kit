@@ -7,93 +7,95 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/bobacgo/kit/app/types"
+	"github.com/bobacgo/kit/pkg/uid"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
 )
 
 const (
-	CacheKeyPrefix        = "login_token:"
-	ATokenExpiredDuration = 2 * time.Hour
-	RTokenExpiredDuration = 30 * 24 * time.Hour
+	CacheKeyPrefix                       = "login_token:"
+	ATokenExpiredDuration types.Duration = "2h"
+	RTokenExpiredDuration types.Duration = "360h" // 15天
 )
 
 type JWToken struct {
-	SigningKey          []byte
-	Issuer              string        // jwt issuer
-	AccessTokenExpired  time.Duration // jwt access token expired
-	RefreshTokenExpired time.Duration // jwt refresh token expired
-	cache               redis.Cmdable
-	cacheKeyPrefix      string
+	cfg   JwtConfig
+	cache redis.Cmdable
 }
 
-var JwtHelper = NewJWT(&JwtConfig{
-	Secret: "bobacgo",
-}, nil)
+// TODO 实现本地存储
+// func NewJWTLocal(conf *JwtConfig) *JWToken {
+// 	jwt := &JWToken{cfg: *conf}
+// 	jwt.init()
+// 	return jwt
+// }
 
 func NewJWT(conf *JwtConfig, rdb redis.Cmdable) *JWToken {
 	if conf.CacheKeyPrefix == "" {
 		conf.CacheKeyPrefix = CacheKeyPrefix
 	}
-	return &JWToken{
-		SigningKey:          []byte(conf.Secret),
-		Issuer:              conf.Issuer,
-		AccessTokenExpired:  conf.AccessTokenExpired.TimeDuration(),
-		RefreshTokenExpired: conf.RefreshTokenExpired.TimeDuration(),
-		cacheKeyPrefix:      conf.CacheKeyPrefix,
-		cache:               rdb,
+	jwt := &JWToken{cfg: *conf, cache: rdb}
+	jwt.init()
+	return jwt
+}
+
+func (t *JWToken) init() {
+	if t.cfg.AccessTokenExpired == "" {
+		t.cfg.AccessTokenExpired = ATokenExpiredDuration
+	}
+	if t.cfg.RefreshTokenExpired == "" {
+		t.cfg.RefreshTokenExpired = RTokenExpiredDuration
 	}
 }
 
 // Generate 颁发token access token 和 refresh token
 // refresh token 不需要保存任何用户信息
 func (t *JWToken) Generate(ctx context.Context, claims *Claims) (atoken, rtoken string, err error) {
-	if claims.ExpiresAt == 0 {
-		if t.AccessTokenExpired == 0 {
-			t.AccessTokenExpired = ATokenExpiredDuration
-		}
-		claims.ExpiresAt = time.Now().Add(t.AccessTokenExpired).Unix()
-	}
-	if t.Issuer != "" {
-		claims.Issuer = t.Issuer
-	}
+	claims.ID = uid.UUID()
+	claims.Issuer = t.cfg.Issuer
+	claims.Audience = t.cfg.Audience
+	claims.ExpiresAt = jwt.NewNumericDate(time.Now().UTC().Add(t.cfg.AccessTokenExpired.TimeDuration()))
+	claims.NotBefore = jwt.NewNumericDate(time.Now().UTC())
 
-	claims.NotBefore = time.Now().Unix() // 签名生效时间
-	atoken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(t.SigningKey)
+	atoken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(t.cfg.Secret)
 	if err != nil {
+		err = fmt.Errorf("access token generate err: %w", err)
 		return
 	}
+
 	// refresh token 不需要保存任何用户信息
-	sc := claims.StandardClaims
-	if t.RefreshTokenExpired == 0 {
-		t.RefreshTokenExpired = RTokenExpiredDuration
+	sampleClains := &jwt.RegisteredClaims{
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(t.cfg.RefreshTokenExpired.TimeDuration())),
+		NotBefore: claims.NotBefore,
+		Subject:   claims.Subject,
 	}
-	sc.ExpiresAt = time.Now().Add(t.RefreshTokenExpired).Unix()
-	rtoken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, sc).SignedString(t.SigningKey)
-	err = t.cacheToken(ctx, claims.Username, claims.Id, atoken)
+	rtoken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, sampleClains).SignedString(t.cfg.Secret)
+	if err != nil {
+		err = fmt.Errorf("refresh token generate err: %w", err)
+		return
+	}
+
+	err = t.cacheToken(ctx, claims.Subject, claims.ID, atoken)
 	return
 }
 
+func (t *JWToken) cacheToken(ctx context.Context, subject, tokenID, token string) error {
+	value := fmt.Sprintf("%s|%s", tokenID, token)
+	if t.cache == nil {
+		return nil
+	}
+	return t.cache.Set(ctx, t.key(subject), value, t.cfg.AccessTokenExpired.TimeDuration()).Err()
+}
+
 func (t *JWToken) keyfunc(_ *jwt.Token) (any, error) {
-	return t.SigningKey, nil
+	return t.cfg.Secret, nil
 }
 
 func (t *JWToken) Parse(tokenString string) (*Claims, error) {
 	claims := new(Claims)
 	_, err := jwt.ParseWithClaims(tokenString, claims, t.keyfunc)
 	return claims, err
-}
-
-// Verify 验证Token
-func (t *JWToken) Verify(tokenString string) (*Claims, error) {
-	claims := new(Claims)
-	token, err := jwt.ParseWithClaims(tokenString, claims, t.keyfunc)
-	if err != nil {
-		return nil, err
-	}
-	if !token.Valid {
-		return nil, errors.New("token 验证不通过")
-	}
-	return claims, nil
 }
 
 // Refresh 通过 refresh token 刷新 atoken
@@ -104,22 +106,9 @@ func (t *JWToken) Refresh(ctx context.Context, rtoken string, claims *Claims) (n
 	return t.Generate(ctx, claims)
 }
 
-func (t *JWToken) ValidationErrorExpired(err error) bool {
-	var v *jwt.ValidationError
-	return errors.As(err, &v) && v.Errors == jwt.ValidationErrorExpired
-}
-
-func (t *JWToken) cacheToken(ctx context.Context, username, tokenID, token string) error {
-	value := fmt.Sprintf("%s|%s", tokenID, token)
-	if t.cache == nil {
-		return nil
-	}
-	return t.cache.Set(ctx, t.key(username), value, t.AccessTokenExpired).Err()
-}
-
 // GetToken 获取 token
-func (t *JWToken) GetToken(ctx context.Context, username string) (string, error) {
-	tokenInfo, err := t.getToken(ctx, username)
+func (t *JWToken) GetToken(ctx context.Context, subject string) (string, error) {
+	tokenInfo, err := t.getToken(ctx, subject)
 	if err != nil {
 		return "", err
 	}
@@ -129,8 +118,9 @@ func (t *JWToken) GetToken(ctx context.Context, username string) (string, error)
 	return tokenInfo[1], nil
 }
 
-func (t *JWToken) GetTokenID(ctx context.Context, username string) (string, error) {
-	tokenInfo, err := t.getToken(ctx, username)
+// GetTokenID 获取 tokenID
+func (t *JWToken) GetTokenID(ctx context.Context, subject string) (string, error) {
+	tokenInfo, err := t.getToken(ctx, subject)
 	if err != nil {
 		return "", err
 	}
@@ -140,18 +130,19 @@ func (t *JWToken) GetTokenID(ctx context.Context, username string) (string, erro
 	return tokenInfo[0], nil
 }
 
-func (t *JWToken) RemoveToken(ctx context.Context, username string) error {
+// RemoveToken 删除 token
+func (t *JWToken) RemoveToken(ctx context.Context, subject string) error {
 	if t.cache == nil {
 		return nil
 	}
-	return t.cache.Del(ctx, t.key(username)).Err()
+	return t.cache.Del(ctx, t.key(subject)).Err()
 }
 
-func (t *JWToken) getToken(ctx context.Context, username string) ([]string, error) {
+func (t *JWToken) getToken(ctx context.Context, subject string) ([]string, error) {
 	if t.cache == nil {
 		return nil, errors.New("token not cache")
 	}
-	tokenStr, err := t.cache.Get(ctx, t.key(username)).Result()
+	tokenStr, err := t.cache.Get(ctx, t.key(subject)).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -159,6 +150,6 @@ func (t *JWToken) getToken(ctx context.Context, username string) ([]string, erro
 	return strings.SplitN(tokenStr, "|", 2), nil
 }
 
-func (t *JWToken) key(username string) string {
-	return fmt.Sprintf("%s:%s", t.cacheKeyPrefix, username)
+func (t *JWToken) key(subject string) string {
+	return fmt.Sprintf("%s:%s", t.cfg.CacheKeyPrefix, subject)
 }

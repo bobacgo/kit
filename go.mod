@@ -23,6 +23,8 @@ require (
 	gorm.io/gorm v1.25.12
 )
 
+require moul.io/zapgorm2 v1.3.0 // indirect
+
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect

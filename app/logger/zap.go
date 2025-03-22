@@ -38,11 +38,8 @@ func InitZapLogger(conf Config) {
 	)
 
 	core := zapcore.NewTee(fileCore, consoleCore)
-
-	slogHandler := zapslog.NewHandler(core, zapslog.WithCaller(true), zapslog.AddStacktraceAt(16))
-	InitSlog(slogHandler)
-
-	// SetLogger(&ZapLogger{logger: zap.New(core, zap.AddCaller(), zap.AddCallerSkip(2))})
+	zap.ReplaceGlobals(zap.New(core, zap.AddCaller(), zap.AddCallerSkip(2))) // 替换全局的logger实例，后续在其他包中只需使用zap.L()调用即可
+	InitSlog(zapslog.NewHandler(core, zapslog.WithCaller(true), zapslog.AddStacktraceAt(16)))
 }
 
 func setConsoleEncoder(timeFormat string) zapcore.Encoder {

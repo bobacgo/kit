@@ -11,7 +11,6 @@ import (
 // }
 
 func InitSlog(h slog.Handler) {
-	// sc := slogcontext.NewHandler(slogmulti.Fanout(handlers...))
 	l := slog.New(h)
 	slog.SetDefault(l)
 }

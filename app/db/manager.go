@@ -49,6 +49,8 @@ type DialectorConfig struct {
 	Config    Config
 }
 
+// DriverOpenFunc 驱动打开函数
+// 如: mysql.Open
 type DriverOpenFunc func(dsn string) gorm.Dialector
 
 func DialectorMap(drivers []DriverOpenFunc, cfgMap map[string]Config) map[string]DialectorConfig {
@@ -56,7 +58,7 @@ func DialectorMap(drivers []DriverOpenFunc, cfgMap map[string]Config) map[string
 
 	driverMap := map[string]DriverOpenFunc{mysql.DefaultDriverName: mysql.Open} // 默认提供mysql驱动
 	for _, d := range drivers {
-		name := d("").Name()
+		name := d("").Name() // 驱动名
 		driverMap[name] = d
 	}
 

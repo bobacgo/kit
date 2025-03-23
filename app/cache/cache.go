@@ -25,7 +25,7 @@ type Cache interface {
 	Keys() int64
 }
 
-var defaultSize types.ByteSize = "512M"
+var defaultSize types.ByteSize = "256M"
 
 func DefaultCache() Cache {
 	cache, _ := NewFreeCache(defaultSize)

@@ -34,28 +34,20 @@ func NewDB(dialector gorm.Dialector, conf Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("get DB err: %w", err)
 	}
 
-	if conf.MaxIdleConn != 0 {
-		// 影响最大并发数。
-		// 过大可能导致数据库负载过高，过小会限制并发性能。
-		//一般设置在 100~500，具体根据数据库负载情况调整。
-		sqlDB.SetMaxOpenConns(conf.MaxOpenConn) // 设置最大连接数
-	}
-	if conf.MaxOpenConn != 0 {
-		// 控制保持在池中的空闲连接数。
-		// 过大会浪费资源，过小可能导致频繁创建连接，增加延迟。
-		// 典型范围是 10~50。
-		sqlDB.SetMaxIdleConns(conf.MaxIdleConn) // 设置闲置连接数
-	}
-	if conf.MaxLifeTime == "" {
-		// 控制连接存活的最大时间，避免连接长时间占用资源导致 MySQL 关闭连接。
-		// 建议设置 30min ~ 1h，防止连接泄露。
-		sqlDB.SetConnMaxLifetime(conf.MaxLifeTime.TimeDuration()) // 连接的最大可复用时间
-	}
-	if conf.MaxIdleTime == "" {
-		// 控制空闲连接的最长时间，防止长期空闲的连接占用资源。
-		// 典型值 10min，根据业务需求调整。
-		sqlDB.SetConnMaxIdleTime(conf.MaxIdleTime.TimeDuration()) // 空闲连接的最大生存时间
-	}
+	// 影响最大并发数。
+	// 过大可能导致数据库负载过高，过小会限制并发性能。
+	//一般设置在 100~500，具体根据数据库负载情况调整。
+	sqlDB.SetMaxOpenConns(conf.MaxOpenConn) // 设置最大连接数
+	// 控制保持在池中的空闲连接数。
+	// 过大会浪费资源，过小可能导致频繁创建连接，增加延迟。
+	// 典型范围是 10~50。
+	sqlDB.SetMaxIdleConns(conf.MaxIdleConn) // 设置闲置连接数
+	// 控制连接存活的最大时间，避免连接长时间占用资源导致 MySQL 关闭连接。
+	// 建议设置 30min ~ 1h，防止连接泄露。
+	sqlDB.SetConnMaxLifetime(conf.MaxLifeTime.TimeDuration()) // 连接的最大可复用时间
+	// 控制空闲连接的最长时间，防止长期空闲的连接占用资源。
+	// 典型值 10min，根据业务需求调整。
+	sqlDB.SetConnMaxIdleTime(conf.MaxIdleTime.TimeDuration()) // 空闲连接的最大生存时间
 	return db, nil
 }
 

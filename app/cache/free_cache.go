@@ -1,7 +1,8 @@
 package cache
 
 import (
-	"encoding/json"
+	"bytes"
+	"encoding/gob"
 	"time"
 
 	"github.com/bobacgo/kit/app/types"
@@ -32,12 +33,11 @@ func (f *freeCache) SetMaxMemory(_ string) bool {
 }
 
 func (f *freeCache) Set(key string, val any, expire time.Duration) error {
-	b, err := json.Marshal(val)
-	if err != nil {
+	var buf bytes.Buffer
+	if err := gob.NewDecoder(&buf).Decode(val); err != nil {
 		return err
 	}
-	err = f.cache.Set([]byte(key), b, int(expire.Seconds()))
-	return err
+	return f.cache.Set([]byte(key), buf.Bytes(), int(expire.Seconds()))
 }
 
 func (f *freeCache) Get(key string, result any) error {
@@ -45,10 +45,7 @@ func (f *freeCache) Get(key string, result any) error {
 	if err != nil {
 		return err
 	}
-	if err := json.Unmarshal(value, result); err != nil {
-		return err
-	}
-	return nil
+	return gob.NewEncoder(bytes.NewBuffer(value)).Encode(&result)
 }
 
 func (f *freeCache) Del(key string) bool {

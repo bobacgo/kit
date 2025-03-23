@@ -136,7 +136,7 @@ func WithMustRedis() AppOption {
 	return func(o *AppOptions) {
 		o.wg.Go(func() error {
 			var err error
-			if o.redis, err = cache.NewDBManager(o.conf.Redis); err != nil {
+			if o.redis, err = cache.NewRedisManager(o.conf.Name, o.conf.Redis); err != nil {
 				return fmt.Errorf("init redis failed: %w", err)
 			}
 			slog.Info(fmt.Sprintf(initDoneFmt, compRedis))

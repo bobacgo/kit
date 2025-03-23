@@ -13,14 +13,14 @@ const defaultInstanceKey = "default"
 // 多数据源管理
 type RedisManager map[string]redis.UniversalClient
 
-func NewDBManager(cfgMap map[string]RedisConf) (RedisManager, error) {
+func NewRedisManager(appName string, cfgMap map[string]RedisConf) (RedisManager, error) {
 	if _, ok := cfgMap[defaultInstanceKey]; !ok {
 		return nil, fmt.Errorf("not found default instance, must be has default")
 	}
 	manager := make(RedisManager, len(cfgMap))
 	for k, v := range cfgMap {
 		var err error
-		if manager[k], err = NewRedis(v); err != nil {
+		if manager[k], err = NewRedis(appName, v); err != nil {
 			return nil, fmt.Errorf("k = %s , init err: %v", k, err)
 		}
 	}

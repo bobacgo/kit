@@ -8,6 +8,9 @@ import (
 // --- MD5签名 ---
 
 func MD5(data string) string {
+	if data == "" {
+		return ""
+	}
 	h := md5.New()
 	h.Write([]byte(data))
 	return hex.EncodeToString(h.Sum(nil))

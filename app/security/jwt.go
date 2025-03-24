@@ -67,6 +67,7 @@ func (t *JWToken) Generate(ctx context.Context, claims *Claims) (atoken, rtoken 
 
 	// refresh token 不需要保存任何用户信息
 	sampleClains := &jwt.RegisteredClaims{
+		ID:        uid.UUID(),
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(t.cfg.RefreshTokenExpired.TimeDuration())),
 		NotBefore: claims.NotBefore,
 		Subject:   claims.Subject,
@@ -91,13 +92,13 @@ func (t *JWToken) Parse(tokenString string) (*Claims, error) {
 	return claims, err
 }
 
-// Refresh 通过 refresh token 刷新 atoken
-func (t *JWToken) Refresh(ctx context.Context, rtoken string, claims *Claims) (newAToken, newRToken string, err error) {
-	if _, err = jwt.Parse(rtoken, t.keyfunc); err != nil { // rtoken 无效直接返回
-		return
-	}
-	return t.Generate(ctx, claims)
-}
+// // Refresh 通过 refresh token 刷新 atoken
+// func (t *JWToken) Refresh(ctx context.Context, rtoken string, claims *Claims) (newAToken, newRToken string, err error) {
+// 	if _, err = jwt.Parse(rtoken, t.keyfunc); err != nil { // rtoken 无效直接返回
+// 		return
+// 	}
+// 	return t.Generate(ctx, claims)
+// }
 
 // GetToken 获取 token
 func (t *JWToken) GetToken(ctx context.Context, subject string) (string, error) {

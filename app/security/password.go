@@ -4,17 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync/atomic"
 	"time"
 
+	"github.com/bobacgo/kit/app/cache"
 	"github.com/bobacgo/kit/pkg/ucrypto"
 	"github.com/bobacgo/kit/pkg/utime"
 	"github.com/redis/go-redis/v9"
 )
 
 var (
-	ErrPasswdLimit    = errors.New("password error limit")
-	ErrPasswdMismatch = errors.New("password mismatch")
+	ErrPasswdLimit = errors.New("password error limit")
 )
 
 // PasswdVerifier 登录密码验证器
@@ -22,50 +21,30 @@ var (
 // 2.随机生成盐
 // 3.密码错误次数限制(依赖Redis)
 type PasswdVerifier struct {
-	cache      redis.Cmdable
-	key        string        // 错误密码存放的key
+	cache      cache.Cache
+	rdb        redis.Cmdable
 	expiration time.Duration // 限制时长(在有效的错误次数范围内,每次错误都会刷新)
 	limit      int32         // 错误次数限制
-	errCount   atomic.Int32  // 尝试次数
 }
 
 // DefaultPasswdVerifier 本地统计错误次数 (单节点)
-func DefaultPasswdVerifier(limit int32) *PasswdVerifier {
-	return &PasswdVerifier{limit: 5}
+func DefaultPasswdVerifier(cache cache.Cache, expiration time.Duration, limit int32) *PasswdVerifier {
+	return &PasswdVerifier{
+		cache:      cache,
+		expiration: expiration,
+		limit:      5,
+	}
 }
 
 // NewPasswdVerifier 通过redis实现密码错误次数限制 (多节点)
-// 1. 如果 expiration 为0,则使用默认的过期时间为第二天零点
-func NewPasswdVerifier(rdb redis.Cmdable, key string, expiration time.Duration, limit int32) *PasswdVerifier {
+// 1. keyTmp: 错误次数存放的key的模板 key = fmt.Sprintf(keyTmp, username)
+// 2. 如果 expiration 为0,则使用默认的过期时间为第二天零点
+func NewPasswdVerifier(rdb redis.Cmdable, expiration time.Duration, limit int32) *PasswdVerifier {
 	return &PasswdVerifier{
-		cache:      rdb,
-		key:        key,
+		rdb:        rdb,
 		expiration: expiration,
 		limit:      limit,
 	}
-}
-
-func (h *PasswdVerifier) expire() time.Duration {
-	if h.expiration != 0 {
-		return h.expiration
-	}
-	return time.Duration(utime.ZeroHour(1).Unix() - time.Now().Unix())
-}
-
-// BcryptVerifyWithCount 验证密码统计错误次数
-func (h *PasswdVerifier) BcryptVerifyWithCount(ctx context.Context, hash, password string) (bool, error) {
-	if len(hash) <= 8 {
-		return false, errors.New("hash length error")
-	}
-	if !verifyPwd(hash, password) {
-		if err := h.fail(ctx); err != nil {
-			return false, err
-		}
-		return false, ErrPasswdMismatch
-	}
-
-	// 验证成功,删除错误次数
-	return true, h.delIncr(ctx)
 }
 
 // BcryptVerify 验证密码
@@ -78,52 +57,118 @@ func (h *PasswdVerifier) BcryptHash(passwd string) string {
 	return processPwd(passwd)
 }
 
-// GetErrCount 获取密码错误的次数
-func (h *PasswdVerifier) GetErrCount() int32 {
-	return h.errCount.Load()
+// VerifierAndCount 验证密码统计错误次数
+func (h *PasswdVerifier) VerifierAndCount(key string) PwdVerifier {
+	return PwdVerifier{
+		key: key,
+		pv:  h,
+	}
 }
 
-// GetRemainCount 获取密码剩余的错误次数
-func (h *PasswdVerifier) GetRemainCount() int32 {
-	return max(h.limit-h.errCount.Load(), 0)
+type PwdVerifier struct {
+	key      string
+	errCount int32
+	pv       *PasswdVerifier
+	OnErr    func(err error)
+}
+
+// BcryptVerifyWithCount 验证密码统计错误次数
+func (h *PwdVerifier) BcryptVerify(ctx context.Context, hash, password string) bool {
+	if len(hash) <= 8 {
+		if h.OnErr != nil {
+			h.OnErr(errors.New("hash length error"))
+		}
+		return false
+	}
+	if !verifyPwd(hash, password) {
+		h.fail(ctx)
+		return false
+	}
+	// 验证成功,删除错误次数
+	if err := h.delIncr(ctx); err != nil {
+		h.OnErr(err)
+	}
+	return true
 }
 
 // Incr 密码错误次数+1
-func (h *PasswdVerifier) Incr(ctx context.Context) error {
-	if h.cache != nil {
-		count, err := h.cache.Incr(ctx, h.key).Result()
-		if err != nil && !errors.Is(err, redis.Nil) {
-			return fmt.Errorf("redis incr %s: %w", h.key, err)
-		}
-		h.errCount.Store(int32(count))
-	} else {
-		h.errCount.Add(1)
-	}
-	return nil
+func (h *PwdVerifier) Incr(ctx context.Context) {
+	h.fail(ctx)
 }
 
-func (h *PasswdVerifier) fail(ctx context.Context) error {
-	if err := h.Incr(ctx); err != nil {
-		return err
+// Clear 清除密码错误次数
+func (h *PwdVerifier) Clear(ctx context.Context) {
+	if err := h.delIncr(ctx); err != nil && h.OnErr != nil {
+		h.OnErr(err)
 	}
-	if h.cache != nil {
-		// 重置过期时间
-		if err := h.cache.Expire(ctx, h.key, h.expire()).Err(); err != nil && !errors.Is(err, redis.Nil) {
-			return fmt.Errorf("redis expire %s: %w", h.key, err)
+	h.errCount = 0
+}
+
+// GetErrCount 获取密码错误次数
+func (h *PwdVerifier) GetErrCount() int32 {
+	return h.errCount
+}
+
+// GetRemainCount 获取密码剩余的错误次数
+func (h *PwdVerifier) GetRemainCount() int32 {
+	return max(h.pv.limit-int32(h.errCount), 0)
+}
+
+func (h *PwdVerifier) expire() time.Duration {
+	if h.pv.expiration != 0 {
+		return h.pv.expiration
+	}
+	return time.Duration(utime.ZeroHour(1).Unix() - time.Now().Unix())
+}
+
+func (h *PwdVerifier) fail(ctx context.Context) {
+	if err := h.incr(ctx); err != nil && h.OnErr != nil {
+		h.OnErr(err)
+	}
+	if err := h.reExpire(ctx); err != nil && h.OnErr != nil {
+		h.OnErr(err)
+	}
+}
+
+func (h *PwdVerifier) incr(ctx context.Context) error {
+	var err error
+	if h.pv.rdb != nil {
+		count, ierr := h.pv.rdb.Incr(ctx, h.key).Result()
+		if ierr != nil && !errors.Is(ierr, redis.Nil) {
+			err = fmt.Errorf("redis incr %s: %w", h.key, ierr)
+		} else {
+			h.errCount = int32(count)
 		}
+	} else if h.pv.cache != nil {
+		h.pv.cache.Get(h.key, &h.errCount)
+		h.errCount++
 	}
-	if h.errCount.Load() >= h.limit {
+
+	if h.errCount >= h.pv.limit {
 		return ErrPasswdLimit
 	}
+	return err
+}
+
+func (h *PwdVerifier) delIncr(ctx context.Context) error {
+	if h.pv.rdb != nil {
+		if err := h.pv.rdb.Del(ctx, h.key).Err(); err != nil && !errors.Is(err, redis.Nil) {
+			return fmt.Errorf("redis del %s: %w", h.key, err)
+		}
+	} else if h.pv.cache != nil {
+		h.pv.cache.Del(h.key)
+	}
 	return nil
 }
 
-func (h *PasswdVerifier) delIncr(ctx context.Context) error {
-	if h.cache == nil {
-		return nil
-	}
-	if err := h.cache.Del(ctx, h.key).Err(); err != nil && !errors.Is(err, redis.Nil) {
-		return fmt.Errorf("redis del %s: %w", h.key, err)
+// 重置Key的过期时间
+func (h *PwdVerifier) reExpire(ctx context.Context) error {
+	if h.pv.rdb != nil {
+		if err := h.pv.rdb.Expire(ctx, h.key, h.expire()).Err(); err != nil && !errors.Is(err, redis.Nil) {
+			return fmt.Errorf("redis expire %s: %w", h.key, err)
+		}
+	} else if h.pv.cache != nil {
+		h.pv.cache.Set(h.key, h.errCount, h.expire())
 	}
 	return nil
 }

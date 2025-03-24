@@ -10,6 +10,9 @@ import (
 // --- SHA签名 ---
 
 func SHA1(data string) string {
+	if data == "" {
+		return ""
+	}
 	h := sha1.New()
 	h.Write([]byte(data))
 	// fmt.Sprintf("%x", h.Sum(nil))
@@ -18,6 +21,9 @@ func SHA1(data string) string {
 }
 
 func SHA256(secret, data string) string {
+	if data == "" {
+		return ""
+	}
 	// Create a new HMAC by defining the hash type and the key (as byte array)
 	h := hmac.New(sha256.New, []byte(secret))
 	// Write Data to it

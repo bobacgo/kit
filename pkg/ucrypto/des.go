@@ -10,6 +10,12 @@ import (
 // --- DES加密解密(对称) ---
 
 func DESEncrypt(text, key string) (string, error) {
+	if text == "" {
+		return "", nil
+	}
+	if key == "" {
+		return "", errors.New("key is empty")
+	}
 	src, kb := []byte(text), []byte(key)
 	block, err := des.NewCipher(kb)
 	if err != nil {
@@ -31,6 +37,12 @@ func DESEncrypt(text, key string) (string, error) {
 }
 
 func DESDecrypt(decrypted, key string) (string, error) {
+	if decrypted == "" {
+		return "", nil
+	}
+	if key == "" {
+		return "", errors.New("key is empty")
+	}
 	src, err := hex.DecodeString(decrypted)
 	if err != nil {
 		return "", err

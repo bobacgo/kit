@@ -32,6 +32,9 @@ import (
 */
 
 func AESEncrypt(plaintext, key string) (string, error) {
+	if plaintext == "" {
+		return "", nil
+	}
 	pb, kb := []byte(plaintext), []byte(key)
 	// 秘钥块
 	bl, err := aes.NewCipher(kb)
@@ -50,6 +53,9 @@ func AESEncrypt(plaintext, key string) (string, error) {
 }
 
 func AESDecrypt(ciphertext, key string) (pt string, err error) {
+	if ciphertext == "" {
+		return "", nil
+	}
 	// panic recover bm.CryptBlocks
 	defer func() {
 		if r := recover(); r != nil {

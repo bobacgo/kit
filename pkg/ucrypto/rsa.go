@@ -21,6 +21,12 @@ import (
 
 // RSAEncrypt 加密
 func RSAEncrypt(publicKey []byte, plaintext string) (string, error) {
+	if plaintext == "" {
+		return "", nil
+	}
+	if len(publicKey) == 0 {
+		return "", errors.New("public key is empty")
+	}
 	//解密pem格式的公钥
 	block, _ := pem.Decode(publicKey)
 	if block == nil {
@@ -40,6 +46,13 @@ func RSAEncrypt(publicKey []byte, plaintext string) (string, error) {
 
 // RSADecrypt 解密
 func RSADecrypt(privateKey []byte, ciphertext string) (string, error) {
+	if ciphertext == "" {
+		return "", nil
+	}
+	if len(privateKey) == 0 {
+		return "", errors.New("private key is empty")
+	}
+
 	//解密
 	block, _ := pem.Decode(privateKey)
 	if block == nil {
@@ -61,6 +74,9 @@ func RSADecrypt(privateKey []byte, ciphertext string) (string, error) {
 
 // KeyPairs 生成RSA密钥对
 func KeyPairs(keyName string) {
+	if keyName == "" {
+		keyName = "rsa"
+	}
 	privateKey, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		log.Fatal(err)

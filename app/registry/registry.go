@@ -2,7 +2,8 @@ package registry
 
 import "context"
 
-// TODO 健康检测
+// go get -u github.com/go-kratos/kratos/contrib/registry/etcd/v2
+// go get -u github.com/go-kratos/kratos/contrib/registry/kubernetes/v2
 
 // ServiceRegistrar 服务注册
 type ServiceRegistrar interface {
@@ -19,11 +20,14 @@ type ServiceRegistrar interface {
 type ServiceDiscovery interface {
 	// GetService 获取服务实例
 	GetService(ctx context.Context, serviceName string) ([]*ServiceInstance, error)
+	// Watch 根据服务名称创建观察者
 	Watch(ctx context.Context, serviceName string) (Watcher, error)
 }
 
 type Watcher interface {
+	// Next 监听服务实例变化
 	Next() ([]*ServiceInstance, error)
+	// Stop 停止监听
 	Stop() error
 }
 
@@ -36,4 +40,8 @@ type ServiceInstance struct {
 	// http://127.0.0.1:8000
 	// grpc://127.0.0.1:9000
 	Endpoints []string `json:"endpoints"`
+}
+
+func (s *ServiceInstance) String() string {
+	return s.Name + "-" + s.ID
 }

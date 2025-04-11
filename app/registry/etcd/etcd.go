@@ -10,7 +10,7 @@ import (
 
 	"github.com/bobacgo/kit/app/registry"
 	"github.com/bobacgo/kit/pkg/uid"
-	"go.etcd.io/etcd/clientv3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 var (

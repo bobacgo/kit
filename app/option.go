@@ -9,6 +9,8 @@ import (
 
 	"github.com/bobacgo/kit/app/mq/kafka"
 	"github.com/bobacgo/kit/app/server"
+	"github.com/bobacgo/kit/app/server/gateway"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 
 	"golang.org/x/sync/errgroup"
 
@@ -195,6 +197,15 @@ func WithGrpcServer(svr func(s *grpc.Server, a *AppOptions), grpcServerOpts ...g
 func WithKafka(subs ...kafka.Subscriber) AppOption {
 	return WithServer(compKafka, func(a *AppOptions) server.Server {
 		return kafka.New(a.Conf().Name, a.Conf().Kafka, subs...)
+	})
+}
+
+// WithCache 使用GrpcGateway
+// reg 注册服务
+// grpcServerOpts 可选的 grpc server options
+func WithGatewayServer(reg []gateway.GatewayRegisterItem, muxs ...runtime.ServeMuxOption) AppOption {
+	return WithServer(compHttp, func(a *AppOptions) server.Server {
+		return gateway.New(a.Conf().GrpcGateway, reg, muxs...)
 	})
 }
 

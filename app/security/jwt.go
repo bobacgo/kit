@@ -59,7 +59,7 @@ func (t *JWToken) Generate(ctx context.Context, claims *Claims) (atoken, rtoken 
 	claims.ExpiresAt = jwt.NewNumericDate(time.Now().UTC().Add(t.cfg.AccessTokenExpired.TimeDuration()))
 	claims.NotBefore = jwt.NewNumericDate(time.Now().UTC())
 
-	atoken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(t.cfg.Secret)
+	atoken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(t.cfg.Secret))
 	if err != nil {
 		err = fmt.Errorf("access token generate err: %w", err)
 		return
@@ -72,7 +72,7 @@ func (t *JWToken) Generate(ctx context.Context, claims *Claims) (atoken, rtoken 
 		NotBefore: claims.NotBefore,
 		Subject:   claims.Subject,
 	}
-	rtoken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, sampleClains).SignedString(t.cfg.Secret)
+	rtoken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, sampleClains).SignedString([]byte(t.cfg.Secret))
 	if err != nil {
 		err = fmt.Errorf("refresh token generate err: %w", err)
 		return

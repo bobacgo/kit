@@ -34,7 +34,9 @@ func (ct *Ciphertext) Decrypt(secret string) error {
 
 // BcryptHash 密码加密
 func (ct *Ciphertext) BcryptHash() string {
-	return processPwd(string(*ct))
+	h := processPwd(string(*ct))
+	*ct = Ciphertext(h)
+	return h
 }
 
 // BcryptVerify 验证密码

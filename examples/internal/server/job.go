@@ -26,3 +26,8 @@ func (k *JobServer) Stop(ctx context.Context) error {
 	slog.Info("job server stop")
 	return nil
 }
+
+func (k *JobServer) AddTask(ctx context.Context, task string) error {
+	k.AddTask(ctx, task)
+	return nil
+}

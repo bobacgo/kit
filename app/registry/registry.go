@@ -2,9 +2,6 @@ package registry
 
 import "context"
 
-// go get -u github.com/go-kratos/kratos/contrib/registry/etcd/v2
-// go get -u github.com/go-kratos/kratos/contrib/registry/kubernetes/v2
-
 // ServiceRegistrar 服务注册
 type ServiceRegistrar interface {
 	// Registry 注册服务

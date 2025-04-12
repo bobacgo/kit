@@ -23,11 +23,12 @@ import (
 )
 
 const (
-	compCache = "cache"
-	compRedis = "redis"
-	compHttp  = "http"
-	compRpc   = "rpc"
-	compKafka = "kafka"
+	compCache   = "cache"
+	compRedis   = "redis"
+	compHttp    = "http"
+	compRpc     = "rpc"
+	compKafka   = "kafka"
+	compGateway = "gateway"
 )
 
 const initDoneFmt = " [%s] init done."
@@ -203,9 +204,9 @@ func WithKafka(subs ...kafka.Subscriber) AppOption {
 // WithCache 使用GrpcGateway
 // reg 注册服务
 // grpcServerOpts 可选的 grpc server options
-func WithGatewayServer(reg []gateway.GatewayRegisterItem, muxs ...runtime.ServeMuxOption) AppOption {
-	return WithServer(compHttp, func(a *AppOptions) server.Server {
-		return gateway.New(a.Conf().GrpcGateway, reg, muxs...)
+func WithGatewayServer(handlerFunc func(mux *runtime.ServeMux), muxs ...runtime.ServeMuxOption) AppOption {
+	return WithServer(compGateway, func(a *AppOptions) server.Server {
+		return gateway.New(a.Conf().GrpcGateway, handlerFunc, muxs...)
 	})
 }
 

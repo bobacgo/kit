@@ -49,7 +49,7 @@ type Basic struct {
 	LocalCache  cache.LocalCacheConf       `mapstructure:"localCache" yaml:"localCache"`
 	Redis       map[string]cache.RedisConf `mapstructure:"redis"` // 支持多数据源 default key 必须存在
 	Kafka       kafka.Config               `mapstructure:"kafka"`
-	GrpcGateway *gateway.Config            `mapstructure:"gateway"`
+	GrpcGateway *gateway.Config            `mapstructure:"gateway" yaml:"gateway"`
 }
 
 type Transport struct {

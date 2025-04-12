@@ -9,21 +9,7 @@ import (
 
 	"github.com/bobacgo/kit/app/server"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
-
-// GatewayRegisterFunc defines the function type for registering handlers to the gateway
-// 定义网关处理器注册函数类型
-type GatewayRegisterFunc func(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) error
-
-// GatewayRegisterItem defines the registration function and its corresponding endpoint
-// 定义注册项，包含注册函数及其对应的端点
-type GatewayRegisterItem struct {
-	Func     GatewayRegisterFunc // Registration function // 注册函数
-	Endpoint string              // gRPC endpoint address // gRPC 端点地址
-	DialOpts []grpc.DialOption   // gRPC dial options // gRPC 拨号选项
-}
 
 // DefaultGatewayConfig returns a default configuration for gateway
 // 返回默认网关配置
@@ -39,15 +25,15 @@ func DefaultGatewayConfig() *Config {
 // Gateway implements the Server interface for grpc-gateway
 // Gateway 实现了 grpc-gateway 的 Server 接口
 type Gateway struct {
-	cfg           *Config
-	RegisterItems []GatewayRegisterItem // Registration items with endpoints // 带端点的注册项
-	server        *http.Server
-	mux           *runtime.ServeMux
+	cfg         *Config
+	server      *http.Server
+	mux         *runtime.ServeMux
+	handlerFunc func(mux *runtime.ServeMux)
 }
 
 // New creates a new Gateway instance
 // 创建一个新的 Gateway 实例
-func New(cfg *Config, register []GatewayRegisterItem, serveMuxOptions ...runtime.ServeMuxOption) *Gateway {
+func New(cfg *Config, handlerFunc func(mux *runtime.ServeMux), serveMuxOptions ...runtime.ServeMuxOption) *Gateway {
 	if cfg == nil {
 		cfg = DefaultGatewayConfig()
 	}
@@ -55,12 +41,13 @@ func New(cfg *Config, register []GatewayRegisterItem, serveMuxOptions ...runtime
 	serveMuxOpts := []runtime.ServeMuxOption{
 		runtime.WithErrorHandler(runtime.DefaultHTTPErrorHandler),
 	}
+
 	serveMuxOpts = append(serveMuxOpts, serveMuxOptions...)
 	mux := runtime.NewServeMux(serveMuxOpts...)
 	return &Gateway{
-		cfg:           cfg,
-		RegisterItems: register,
-		mux:           mux,
+		cfg:         cfg,
+		mux:         mux,
+		handlerFunc: handlerFunc,
 		server: &http.Server{
 			Addr:         cfg.Addr,
 			Handler:      mux,
@@ -106,27 +93,10 @@ func (g *Gateway) ServeSwaggerUI(w http.ResponseWriter, r *http.Request, pathPre
 // Start implements the Server interface
 // 实现 Server 接口的 Start 方法
 func (g *Gateway) Start(ctx context.Context) error {
-	// Register all handlers
-	// 注册所有处理器
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [{"round_robin":{}}]}`), // This sets the initial balancing policy.
-	}
-
-	// Check if we have any registration items
-	// 检查是否有注册项
-	if len(g.RegisterItems) == 0 {
-		return fmt.Errorf("no gRPC service registration items provided")
-	}
-
-	// Register each function with its corresponding endpoint
-	// 为每个注册函数使用其对应的端点进行注册
-	for _, item := range g.RegisterItems {
-		dialOpts := append([]grpc.DialOption{}, opts...)
-		dialOpts = append(dialOpts, item.DialOpts...)
-		if err := item.Func(ctx, g.mux, item.Endpoint, dialOpts); err != nil {
-			return fmt.Errorf("failed to register handler for endpoint %s: %w", item.Endpoint, err)
-		}
+	if g.handlerFunc != nil {
+		// Call the handler function to register handlers
+		// 调用处理器函数以注册处理器
+		g.handlerFunc(g.mux)
 	}
 
 	// Create final handler with optional swagger support

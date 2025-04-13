@@ -8,8 +8,26 @@ import (
 	"strings"
 
 	"github.com/bobacgo/kit/app/server"
+	"github.com/gin-gonic/gin"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
+
+// RegisterHandler registers a handler function with gin
+// 注册一个处理器函数与gin
+// 支持使用 gin 实现 grpc-gateway 的 http server
+func RegisterHandler(e *gin.Engine, handlerFunc func(mux *runtime.ServeMux), serveMuxOptions ...runtime.ServeMuxOption) {
+	mux := runtime.NewServeMux(serveMuxOptions...)
+	if handlerFunc != nil {
+		handlerFunc(mux)
+	}
+	// Register the handler with gin
+	// 使用gin注册处理器
+	e.NoRoute(func(c *gin.Context) {
+		// Serve the request using the mux
+		// 使用mux处理请求
+		mux.ServeHTTP(c.Writer, c.Request)
+	})
+}
 
 // DefaultGatewayConfig returns a default configuration for gateway
 // 返回默认网关配置

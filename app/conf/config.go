@@ -5,6 +5,7 @@ import (
 	"github.com/bobacgo/kit/app/db"
 	"github.com/bobacgo/kit/app/logger"
 	"github.com/bobacgo/kit/app/mq/kafka"
+	"github.com/bobacgo/kit/app/otel"
 	"github.com/bobacgo/kit/app/security"
 	"github.com/bobacgo/kit/app/server/gateway"
 	"github.com/bobacgo/kit/app/types"
@@ -50,6 +51,7 @@ type Basic struct {
 	Redis       map[string]cache.RedisConf `mapstructure:"redis"` // 支持多数据源 default key 必须存在
 	Kafka       kafka.Config               `mapstructure:"kafka"`
 	GrpcGateway *gateway.Config            `mapstructure:"gateway" yaml:"gateway"`
+	Otel        *otel.Config               `mapstructure:"otel" yaml:"otel"` // otel 配置
 }
 
 type Transport struct {

@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/bobacgo/kit/app/mq/kafka"
+	"github.com/bobacgo/kit/app/otel"
 	"github.com/bobacgo/kit/app/server"
 	"github.com/bobacgo/kit/app/server/gateway"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -207,6 +208,18 @@ func WithKafka(subs ...kafka.Subscriber) AppOption {
 func WithGatewayServer(handlerFunc func(mux *runtime.ServeMux), muxs ...runtime.ServeMuxOption) AppOption {
 	return WithServer(compGateway, func(a *AppOptions) server.Server {
 		return gateway.New(a.Conf().GrpcGateway, handlerFunc, muxs...)
+	})
+}
+
+// WithTracerServer 使用 TracerServer
+func WithTracerServer() AppOption {
+	return WithServer("tracer", func(a *AppOptions) server.Server {
+		appInfo := otel.AppInfo{
+			Name:    a.Conf().Name,
+			ID:      a.appId,
+			Version: a.Conf().Version,
+		}
+		return otel.NewTracerServer(appInfo, &a.Conf().Otel.Tracer)
 	})
 }
 

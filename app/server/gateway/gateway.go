@@ -10,6 +10,7 @@ import (
 	"github.com/bobacgo/kit/app/server"
 	"github.com/gin-gonic/gin"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // RegisterHandler registers a handler function with gin
@@ -126,6 +127,9 @@ func (g *Gateway) Start(ctx context.Context) error {
 		// 提供swagger服务
 		handler = g.wrapHandlerWithSwagger(handler)
 	}
+
+	// 自动追踪的 HTTP handler
+	handler = otelhttp.NewHandler(handler, "grpc-gateway")
 
 	// Update server handler
 	// 更新服务器处理器

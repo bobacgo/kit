@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"log/slog"
+
 	v1 "github.com/bobacgo/kit/examples/api/admin/v1"
 	"github.com/bobacgo/kit/web/r"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel"
 )
 
 type UserHandler struct {
@@ -36,6 +39,10 @@ func (u *UserHandler) PageList(c *gin.Context) {
 }
 
 func (u *UserHandler) Get(c *gin.Context) {
+	_, span := otel.Tracer("examples-service").Start(c, "GetUserById")
+	defer span.End()
+	slog.InfoContext(c, "GetUserById", slog.String("id", c.Param("id")))
+	r.Reply(c, nil)
 }
 
 func (u *UserHandler) Create(c *gin.Context) {

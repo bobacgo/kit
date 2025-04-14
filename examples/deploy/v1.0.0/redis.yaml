@@ -8,6 +8,6 @@ redis:
     db: 0
     username:
     password:
-    readTimeout: 1ms
-    writeTimeout: 1ms
+    readTimeout: 100ms
+    writeTimeout: 100ms
     poolSize: 50

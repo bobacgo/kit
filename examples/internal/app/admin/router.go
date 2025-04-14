@@ -10,6 +10,7 @@ func Register(r *gin.RouterGroup, app *app.AppOptions) {
 
 	userHandler := handler.NewUserHandler()
 	// sys user
+	r.GET("v1/user/:id", userHandler.Get)
 	r.POST("v1/user/create", userHandler.Create)
 	r.PUT("v1/user/update", userHandler.Update)
 	r.DELETE("v1/user/delete", userHandler.Delete)

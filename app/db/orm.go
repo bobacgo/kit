@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 
+	"github.com/uptrace/opentelemetry-go-extra/otelgorm"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -33,6 +34,8 @@ func NewDB(dialector gorm.Dialector, conf Config) (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get DB err: %w", err)
 	}
+
+	db.Use(otelgorm.NewPlugin()) // 使用 OpenTelemetry 插件
 
 	// 影响最大并发数。
 	// 过大可能导致数据库负载过高，过小会限制并发性能。

@@ -2,9 +2,9 @@ name: examples-service
 version: '1.0.0'
 env: dev
 configs:
-  - ./examples/deploy/v1.0.0/db.yaml
-  - ./examples/deploy/v1.0.0/logger.yaml
-  - ./examples/deploy/v1.0.0/redis.yaml
+  - ./deploy/v1.0.0/db.yaml
+  - ./deploy/v1.0.0/logger.yaml
+  - ./deploy/v1.0.0/redis.yaml
 server:
   http:
     addr: '0.0.0.0:8080'
@@ -53,3 +53,7 @@ service:
 # registry
 registry:
   addr: '127.0.0.1:2379'
+
+otel:
+  tracer:
+    grpcEndpoint: "127.0.0.1:4317"

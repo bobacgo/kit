@@ -18,7 +18,7 @@ import (
 	"github.com/bobacgo/kit/examples/internal/app/router"
 )
 
-var filepath = flag.String("config", "./examples/config.yaml", "config file path")
+var filepath = flag.String("config", "./config.yaml", "config file path")
 
 func init() {
 	flag.String("name", "admin-service", "service name")
@@ -31,6 +31,7 @@ func init() {
 //go:generate swag init --parseDependency --parseInternal --dir ./ --output ./docs
 func main() {
 	newApp := app.New[config.Service](*filepath,
+		app.WithTracerServer(),
 		app.WithMustDB(sqlite.Open),
 		app.WithMustRedis(),
 		// app.WithKafka(),

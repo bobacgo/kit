@@ -4,6 +4,7 @@ import (
 	"context"
 
 	v1 "github.com/bobacgo/kit/examples/api/pb/user/v1"
+	"go.opentelemetry.io/otel"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -16,7 +17,17 @@ func NewUserService() *UserService {
 }
 
 func (u UserService) GetUserById(ctx context.Context, request *v1.GetUserRequest) (*v1.UserResponse, error) {
-	return nil, nil
+	_, span := otel.Tracer("examples-service").Start(ctx, "GetUserById")
+	defer span.End()
+
+	user := &v1.UserResponse{
+		User: &v1.User{
+			Id:       request.Id,
+			Username: "test",
+		},
+	}
+
+	return user, nil
 }
 
 func (u UserService) CreateUser(ctx context.Context, request *v1.CreateUserRequest) (*v1.UserResponse, error) {

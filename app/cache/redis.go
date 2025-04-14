@@ -1,12 +1,13 @@
 package cache
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/net/context"
 )
 
 // NewRedis Initialize redis connection.
@@ -54,5 +55,11 @@ func NewRedis(appName string, cfg RedisConf) (redis.UniversalClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("redis ping %v", err)
 	}
+
+	// 启用链路追踪
+	if err := redisotel.InstrumentTracing(rdb); err != nil {
+		return nil, fmt.Errorf("enable redis tracing failed: %w", err)
+	}
+
 	return rdb, nil
 }

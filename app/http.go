@@ -19,6 +19,7 @@ import (
 	pkgvalidator "github.com/go-playground/validator/v10"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/bobacgo/kit/app/server/http/middleware"
 	"github.com/bobacgo/kit/web/r"
@@ -68,6 +69,9 @@ func (srv *HttpServer) Start(ctx context.Context) error {
 	e.Use(gin.Logger())
 	e.Use(middleware.Recovery())
 	e.Use(middleware.LoggerResponseFail())
+	if cfg.Otel.Tracer.GrpcEndpoint != "" {
+		e.Use(otelgin.Middleware(cfg.Name))
+	}
 
 	if strings.EqualFold(string(cfg.Env), string(enum.EnvDev)) {
 		slog.Warn(fmt.Sprintf(`[gin] Running in "%s" mode`, gin.Mode()))
